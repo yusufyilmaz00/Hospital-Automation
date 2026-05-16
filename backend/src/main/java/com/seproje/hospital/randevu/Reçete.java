@@ -1,35 +1,43 @@
 package com.seproje.hospital.randevu;
 
+import jakarta.persistence.*;
 import java.util.ArrayList;
-import java.security.SecureRandom;
+import java.util.List;
 
+@Entity
+@Table(name = "recete")
 public class Reçete {
-    private static final String KARAKTERLER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    private static final SecureRandom RNG = new SecureRandom();
 
-    private ArrayList<String> ilaçlar;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false, length = 50)
     private String barkod;
 
-    public Reçete() {
-        this.ilaçlar = new ArrayList<>();
-        this.barkod = barkodUret(10);
+    @ElementCollection
+    @CollectionTable(name = "recete_ilac", joinColumns = @JoinColumn(name = "recete_id"))
+    @Column(name = "ilac")
+    private List<String> ilaçlar = new ArrayList<>();
+
+    @ManyToOne
+    @JoinColumn(name = "tedavi_id", nullable = false)
+    private Tedavi tedavi;
+
+    protected Reçete() {}
+
+    public Reçete(String barkod, Tedavi tedavi) {
+        this.barkod = barkod;
+        this.tedavi = tedavi;
     }
 
-    private static String barkodUret(int uzunluk) {
-        StringBuilder sb = new StringBuilder(uzunluk);
-        for (int i = 0; i < uzunluk; i++) {
-            sb.append(KARAKTERLER.charAt(RNG.nextInt(KARAKTERLER.length())));
-        }
-        return sb.toString();
-    }
+    public Long getId() { return id; }
 
-    public ArrayList<String> getIlaçlar() {
-        return ilaçlar;
-    }
+    public String getBarkod() { return barkod; }
 
-    public String getBarkod() {
-        return barkod;
-    }
+    public List<String> getIlaçlar() { return ilaçlar; }
+
+    public Tedavi getTedavi() { return tedavi; }
 
     public void ilaçEkle(String ilaç) {
         if (ilaçlar.contains(ilaç)) {
