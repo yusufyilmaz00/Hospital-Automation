@@ -41,11 +41,11 @@ public class Randevu{
         this.hasta = hasta;
     }
 
-    public Doctor getDoktor() {
+    public Doktor getDoktor() {
         return doktor;
     }
 
-    public void setDoktor(Doctor doktor) {
+    public void setDoktor(Doktor doktor) {
         this.doktor = doktor;
     }
 
