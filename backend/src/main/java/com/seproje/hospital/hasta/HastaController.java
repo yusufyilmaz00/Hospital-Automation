@@ -15,6 +15,7 @@ public class HastaController {
 
     private final HastaRepository hastaRepository;
     private final HastaMapper hastaMapper;
+    private final HastaService hastaService;
 
     // GET ALL
     @GetMapping
@@ -36,12 +37,7 @@ public class HastaController {
     // CREATE
     @PostMapping
     public HastaResponseDTO create(@RequestBody HastaRequestDTO dto) {
-
-        Hasta hasta = hastaMapper.toEntity(dto);
-
-        return hastaMapper.toDTO(
-                hastaRepository.save(hasta)
-        );
+        return hastaService.create(dto);
     }
 
     // UPDATE

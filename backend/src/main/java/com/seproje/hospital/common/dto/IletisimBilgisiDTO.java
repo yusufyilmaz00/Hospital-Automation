@@ -9,7 +9,7 @@ import java.time.LocalDate;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class İletişimBilgisiDTO {
+public class IletisimBilgisiDTO {
 
     private String isim;
     private String soyisim;

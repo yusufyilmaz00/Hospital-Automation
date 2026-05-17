@@ -1,6 +1,6 @@
 package com.seproje.hospital.hasta;
 
-import com.seproje.hospital.common.İletişimBilgisi;
+import com.seproje.hospital.common.IletisimBilgisi;
 import com.seproje.hospital.randevu.Randevu;
 import jakarta.persistence.*;
 import lombok.*;
@@ -22,7 +22,7 @@ public class Hasta {
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "iletisim_bilgisi_id", nullable = false)
-    private İletişimBilgisi i̇letişimBilgisi;
+    private IletisimBilgisi iletisimBilgisi;
 
     @OneToMany(mappedBy = "hasta", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Randevu> randevular = new ArrayList<>();
@@ -30,7 +30,7 @@ public class Hasta {
     @ElementCollection
     @CollectionTable(name = "hasta_hastaliklar")
     @Column(name = "hastalik")
-    private List<String> hastalıklar;
+    private List<String> hastaliklar = new ArrayList<>();
 
     @Column(nullable = false)
     private Double boy;
