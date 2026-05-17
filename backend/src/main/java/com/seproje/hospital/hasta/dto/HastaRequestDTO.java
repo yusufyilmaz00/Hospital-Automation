@@ -1,6 +1,9 @@
 package com.seproje.hospital.hasta.dto;
 
 import com.seproje.hospital.common.dto.IletisimBilgisiDTO;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.*;
 
 import java.util.List;
@@ -12,10 +15,17 @@ import java.util.List;
 @NoArgsConstructor
 public class HastaRequestDTO {
 
+    @Valid
+    @NotNull(message = "İletişim bilgisi boş olamaz")
     private IletisimBilgisiDTO iletisimBilgisi;
 
-    private List<String> hastaliklar;
-
+    @NotNull(message = "Boy boş olamaz")
+    @Positive(message = "Boy pozitif bir değer olmalıdır")
     private Double boy;
+
+    @NotNull(message = "Kilo boş olamaz")
+    @Positive(message = "Kilo pozitif bir değer olmalıdır")
     private Double kilo;
+
+    private List<String> hastaliklar;
 }

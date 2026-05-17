@@ -3,6 +3,7 @@ package com.seproje.hospital.hasta;
 import com.seproje.hospital.hasta.dto.HastaRequestDTO;
 import com.seproje.hospital.hasta.dto.HastaResponseDTO;
 import com.seproje.hospital.hasta.mapper.HastaMapper;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,14 +37,14 @@ public class HastaController {
 
     // CREATE
     @PostMapping
-    public HastaResponseDTO create(@RequestBody HastaRequestDTO dto) {
+    public HastaResponseDTO create(@Valid @RequestBody HastaRequestDTO dto) {
         return hastaService.create(dto);
     }
 
     // UPDATE
     @PutMapping("/{id}")
     public HastaResponseDTO update(@PathVariable Long id,
-                                   @RequestBody HastaRequestDTO dto) {
+                                   @Valid @RequestBody HastaRequestDTO dto) {
 
         Hasta existing = hastaRepository.findById(id)
                 .orElseThrow();
