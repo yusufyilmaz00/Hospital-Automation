@@ -1,26 +1,101 @@
 package com.seproje.hospital.personel;
 
-import jakarta.persistence.*;
+import java.util.List;
+import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "personel")
-public class Doktor {
+import com.seproje.hospital.common.IletisimBilgisi;
+import com.seproje.hospital.randevu.Randevu;
+import com.seproje.hospital.Hastane.Bolum;
+import com.seproje.hospital.hasta.Hasta;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Doktor extends Personel {
 
-    private String name;
+    public enum Unvan {
+        INTERN("Stajyer", 50.0),
+        RESIDENT("Pratisyen", 75.0),
+        SPECIALIST("Uzman", 100.0),
+        ASSOCIATE_PROFESSOR("Doçent", 150.0),
+        PROFESSOR("Profesör", 200.0);
 
-    protected Doktor() {}
+        private final String displayName;
+        private final double hourlyRate;
 
-    public Doktor(String name) {
-        this.name = name;
+        Unvan(String displayName, double hourlyRate) {
+            this.displayName = displayName;
+            this.hourlyRate = hourlyRate;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+
+        public double getHourlyRate() {
+            return hourlyRate;
+        }
     }
 
-    public Long getId() { return id; }
+    private List<Randevu> activeReservations;
+    private Bolum department;
+    private Unvan unvan;
 
-    public String getName() { return name; }
+    public Doktor(IletisimBilgisi contactInformation, String personelID, String username, String password,
+            List<Randevu> activeReservations, Bolum department, Unvan unvan) {
 
-    public void setName(String name) { this.name = name; }
+        super(contactInformation, personelID, username, password);
+        this.activeReservations = activeReservations;
+        this.department = department;
+        this.unvan = unvan;
+    }
+
+    public List<Randevu> getActiveReservations() {
+        return activeReservations;
+    }
+
+    public Bolum getDepartment() {
+        return department;
+    }
+
+    public Unvan getUnvan() {
+        return unvan;
+    }
+
+    public void setActiveReservations(List<Randevu> activeReservations) {
+        this.activeReservations = activeReservations;
+    }
+
+    public void setDepartment(Bolum department) {
+        this.department = department;
+    }
+
+    public void setUnvan(Unvan unvan) {
+        this.unvan = unvan;
+    }
+
+    public double calculateSalary() {
+        double baseSalary = unvan.getHourlyRate() * 160; // Assuming 160 working hours per month
+        double bonus = activeReservations.size() * 20; // Bonus for each active reservation
+        return baseSalary + bonus;
+    }
+
+    public void addReservation(LocalDateTime randevuZamani, Hasta hasta) {
+        if(checkAvailability(randevuZamani)) {
+            Randevu newRandevu = new Randevu(randevuZamani, hasta, this, calculateSalary());
+            activeReservations.add(newRandevu);
+        } else {
+            throw new IllegalArgumentException("The doctor is not available at the desired time.");
+        }
+    }
+    
+    public void removeReservation(Randevu randevu) {
+        activeReservations.remove(randevu);
+    }
+
+    public boolean checkAvailability(LocalDateTime desiredTime) {
+        for (Randevu randevu : activeReservations) {
+            if (randevu.getRandevuZamani().equals(desiredTime)) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
