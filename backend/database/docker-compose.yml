@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres
+    container_name: hospital-postgres
+    restart: always
+
+    environment:
+      POSTGRES_DB: hospital
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - ./data:/var/lib/postgresql
