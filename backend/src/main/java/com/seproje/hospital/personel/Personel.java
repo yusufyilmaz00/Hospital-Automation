@@ -1,5 +1,6 @@
 package com.seproje.hospital.personel;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import com.seproje.hospital.common.IletisimBilgisi;
@@ -8,12 +9,17 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "personel")
+@RequiredArgsConstructor
+@Inheritance(strategy = InheritanceType.JOINED)
 public class Personel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String personelID;
 
     private String name;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "iletisim_bilgisi_id", nullable = false)
     private IletisimBilgisi contactInformation;
     private String username;
     private String password;

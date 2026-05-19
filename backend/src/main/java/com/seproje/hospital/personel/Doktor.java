@@ -7,7 +7,15 @@ import com.seproje.hospital.common.IletisimBilgisi;
 import com.seproje.hospital.randevu.Randevu;
 import com.seproje.hospital.Hastane.Bolum;
 import com.seproje.hospital.hasta.Hasta;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import lombok.RequiredArgsConstructor;
 
+@Entity
+@Table(name = "doktor")
+@RequiredArgsConstructor
 public class Doktor extends Personel {
 
     public enum Unvan {
@@ -34,7 +42,9 @@ public class Doktor extends Personel {
         }
     }
 
+    @OneToMany(mappedBy = "doktor", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Randevu> activeReservations;
+
     private Bolum department;
     private Unvan unvan;
 
