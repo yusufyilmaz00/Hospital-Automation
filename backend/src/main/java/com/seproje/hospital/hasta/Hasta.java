@@ -1,5 +1,7 @@
 package com.seproje.hospital.hasta;
 
+import com.seproje.hospital.auth.AuthUser;
+import com.seproje.hospital.auth.UserType;
 import com.seproje.hospital.common.IletisimBilgisi;
 import com.seproje.hospital.randevu.Randevu;
 import jakarta.persistence.*;
@@ -15,10 +17,16 @@ import java.util.List;
 @NoArgsConstructor
 @Entity
 @Table(name = "hasta")
-public class Hasta {
+public class Hasta implements AuthUser {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
+    private String email;
+
+    @Column(nullable = false)
+    private String password;
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "iletisim_bilgisi_id", nullable = false)
@@ -37,4 +45,9 @@ public class Hasta {
 
     @Column(nullable = false)
     private Double kilo;
+
+    @Override
+    public UserType getUserType() {
+        return UserType.HASTA;
+    }
 }

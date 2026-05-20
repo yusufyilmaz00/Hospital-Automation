@@ -15,12 +15,12 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final UserService userService;
+    private final AuthService authService;
 
     @PostMapping("/login")
     public ResponseEntity<String> login(@Valid AuthRequest request, HttpServletResponse response) {
 
-        Session session = userService.login(request);
+        Session session = authService.login(request);
 
         Cookie cookie = new Cookie(SessionConstants.COOKIE_NAME, session.getToken());
         cookie.setHttpOnly(true);

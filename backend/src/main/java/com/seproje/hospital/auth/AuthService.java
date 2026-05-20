@@ -9,23 +9,23 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
-public class UserService {
+public class AuthService {
 
     private final String dummyHash;
-    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final SessionService sessionService;
+    private final AuthUserService authUserService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, SessionService sessionService) {
-        this.userRepository = userRepository;
+    public AuthService(PasswordEncoder passwordEncoder, SessionService sessionService, AuthUserService authUserService) {
         this.passwordEncoder = passwordEncoder;
         this.sessionService = sessionService;
+        this.authUserService = authUserService;
 
         this.dummyHash = passwordEncoder.encode("dummy");
     }
 
     public Session login(AuthRequest request) {
-        Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
+        Optional<AuthUser> userOpt = this.findByEmail(request.getEmail());
 
         if (userOpt.isEmpty()) {
             // handle time based attacks
@@ -33,28 +33,23 @@ public class UserService {
             throw new RuntimeException("Invalid credentials");
         }
 
-        User user = userOpt.get();
+        AuthUser user = userOpt.get();
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid credentials");
         }
 
-        return sessionService.createSession(user.getInternalId());
+        return sessionService.createSession(user);
     }
 
-
-    public User register(String email, Integer internalId, UserType userType, String password) {
-        if (userRepository.findByEmail(email).isPresent()) {
-            throw new RuntimeException("Email zaten kayıtlı");
+    private Optional<AuthUser> findByEmail(String email) {
+        for (UserType type : UserType.values()) {
+            AuthUserRepository<?> repository = authUserService.getRepository(type);
+            Optional<? extends AuthUser> user = repository.findByEmail(email);
+            if (user.isPresent()) {
+                return Optional.of(user.get());
+            }
         }
-
-        User user = User.builder()
-                .internalId(internalId)
-                .type(userType)
-                .email(email)
-                .password(passwordEncoder.encode(password))
-                .build();
-
-        return userRepository.save(user);
+        return Optional.empty();
     }
 
 }

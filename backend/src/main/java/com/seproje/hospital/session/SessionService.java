@@ -1,5 +1,6 @@
 package com.seproje.hospital.session;
 
+import com.seproje.hospital.auth.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,13 +15,14 @@ public class SessionService {
 
     private final SessionRepository sessionRepository;
 
-    public Session createSession(Integer userId) {
+    public Session createSession(AuthUser user) {
         Session session = Session.builder()
                 .token(UUID.randomUUID().toString())
-                .userId(userId)
+                .userId(user.getId())
                 .createdAt(LocalDateTime.now())
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .active(true)
+                .userType(user.getUserType())
                 .build();
 
         return sessionRepository.save(session);

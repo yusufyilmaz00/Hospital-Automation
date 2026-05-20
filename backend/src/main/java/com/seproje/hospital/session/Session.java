@@ -1,5 +1,6 @@
 package com.seproje.hospital.session;
 
+import com.seproje.hospital.auth.UserType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,7 +24,7 @@ public class Session {
     private String token;
 
     @Column(nullable = false)
-    private Integer userId;
+    private Long userId;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
@@ -33,4 +34,8 @@ public class Session {
 
     @Column(nullable = false)
     private Boolean active;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserType userType;
 }
