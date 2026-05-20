@@ -3,11 +3,15 @@ package com.seproje.hospital.hasta;
 import com.seproje.hospital.hasta.dto.HastaRequestDTO;
 import com.seproje.hospital.hasta.dto.HastaResponseDTO;
 import com.seproje.hospital.hasta.mapper.HastaMapper;
+import com.seproje.hospital.security.SecurityContextUtil;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/hasta")
@@ -55,6 +59,13 @@ public class HastaController {
         return hastaMapper.toDTO(
                 hastaRepository.save(updated)
         );
+    }
+
+    @GetMapping("/self")
+    public ResponseEntity<HastaResponseDTO> getSelf(HttpServletResponse response) {
+        Optional<Hasta> hastaOptional = SecurityContextUtil.currentUser(Hasta.class);
+        return hastaOptional.map(hasta -> ResponseEntity.ok(hastaMapper.toDTO(hasta)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // DELETE

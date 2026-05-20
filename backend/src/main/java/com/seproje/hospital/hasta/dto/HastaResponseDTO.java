@@ -13,9 +13,7 @@ import java.util.List;
 public class HastaResponseDTO {
 
     private Long id;
-
     private IletisimBilgisiDTO iletisimBilgisi;
-
     private List<String> hastaliklar;
 
     private Double boy;
