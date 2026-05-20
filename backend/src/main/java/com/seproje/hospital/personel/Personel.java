@@ -8,22 +8,38 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "personel")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "personel_tipi", discriminatorType = DiscriminatorType.STRING)
 public class Personel {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "personel_id")
     private String personelID;
 
     private String name;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "iletisim_bilgisi_id")
     private IletisimBilgisi contactInformation;
+
     private String username;
     private String password;
     private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    protected Personel() {}
 
     public Personel(IletisimBilgisi contactInformation, String personelID, String username, String password) {
         this.contactInformation = contactInformation;
         this.personelID = personelID;
         this.username = username;
         this.password = passwordEncoder.encode(password);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public void setContactInformation(IletisimBilgisi contactInformation) {

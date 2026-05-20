@@ -5,8 +5,15 @@ import com.seproje.hospital.common.IletisimBilgisi;
 import com.seproje.hospital.hasta.Hasta;
 import com.seproje.hospital.randevu.Randevu;
 
+import jakarta.persistence.*;
 
+@Entity
+@DiscriminatorValue("RANDEVU_GOREVLISI")
 public class RandevuGorevlisi extends Personel {
+
+    protected RandevuGorevlisi() {
+        super();
+    }
 
     public RandevuGorevlisi(IletisimBilgisi contactInformation, String personelID, String username,
             String password) {
