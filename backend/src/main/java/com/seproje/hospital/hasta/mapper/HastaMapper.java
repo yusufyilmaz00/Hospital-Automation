@@ -12,7 +12,7 @@ import java.util.List;
 
 @Mapper(
         componentModel = "spring",
-        uses = IletisimBilgisiMapper.class
+        uses = {IletisimBilgisiMapper.class, HastalikMapper.class}
 )
 public interface HastaMapper {
 

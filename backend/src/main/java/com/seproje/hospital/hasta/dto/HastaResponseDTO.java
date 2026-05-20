@@ -14,7 +14,7 @@ public class HastaResponseDTO {
 
     private Long id;
     private IletisimBilgisiDTO iletisimBilgisi;
-    private List<String> hastaliklar;
+    private List<HastalikDTO> hastaliklar;
 
     private Double boy;
     private Double kilo;

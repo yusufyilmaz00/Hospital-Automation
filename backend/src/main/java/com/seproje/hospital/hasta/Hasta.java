@@ -35,10 +35,8 @@ public class Hasta implements AuthUser {
     @OneToMany(mappedBy = "hasta", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Randevu> randevular = new ArrayList<>();
 
-    @ElementCollection
-    @CollectionTable(name = "hasta_hastaliklar")
-    @Column(name = "hastalik")
-    private List<String> hastaliklar = new ArrayList<>();
+    @OneToMany(mappedBy = "hasta", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Hastalik> hastaliklar = new ArrayList<>();
 
     @Column(nullable = false)
     private Double boy;
