@@ -2,12 +2,17 @@ package com.seproje.hospital.personel;
 
 import java.util.List;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 
 import com.seproje.hospital.common.IletisimBilgisi;
 import com.seproje.hospital.randevu.Randevu;
 import com.seproje.hospital.Hastane.Bolum;
 import com.seproje.hospital.hasta.Hasta;
 
+import jakarta.persistence.*;
+
+@Entity
+@DiscriminatorValue("DOKTOR")
 public class Doktor extends Personel {
 
     public enum Unvan {
@@ -34,15 +39,26 @@ public class Doktor extends Personel {
         }
     }
 
-    private List<Randevu> activeReservations;
+    @OneToMany(mappedBy = "doktor", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Randevu> activeReservations = new ArrayList<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "bolum")
     private Bolum department;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "unvan")
     private Unvan unvan;
+
+    protected Doktor() {
+        super();
+    }
 
     public Doktor(IletisimBilgisi contactInformation, String personelID, String username, String password,
             List<Randevu> activeReservations, Bolum department, Unvan unvan) {
 
         super(contactInformation, personelID, username, password);
-        this.activeReservations = activeReservations;
+        this.activeReservations = activeReservations != null ? activeReservations : new ArrayList<>();
         this.department = department;
         this.unvan = unvan;
     }
@@ -91,6 +107,9 @@ public class Doktor extends Personel {
     }
 
     public boolean checkAvailability(LocalDateTime desiredTime) {
+        if (activeReservations == null) {
+            return true;
+        }
         for (Randevu randevu : activeReservations) {
             if (randevu.getRandevuZamani().equals(desiredTime)) {
                 return false;
