@@ -1,7 +1,7 @@
 package com.seproje.hospital.hasta.mapper;
 
 import com.seproje.hospital.hasta.dto.HastaDoctorDTO;
-import com.seproje.hospital.personel.Doktor;
+import com.seproje.hospital.personel.doktor.Doktor;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

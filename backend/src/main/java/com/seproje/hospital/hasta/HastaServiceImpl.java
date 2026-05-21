@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +29,11 @@ public class HastaServiceImpl implements HastaService {
     private final HastaMapper hastaMapper;
     private final PasswordEncoder passwordEncoder;
     private final HastalikMapper hastalikMapper;
+
+    private Hasta getHasta(Long hastaId) {
+        return hastaRepository.findById(hastaId)
+                .orElseThrow(() -> new EntityNotFoundException("Hasta bulunamadı: " + hastaId));
+    }
 
     @Override
     @Transactional
@@ -50,76 +56,99 @@ public class HastaServiceImpl implements HastaService {
                 )
                 .build();
 
-        // Hastalik -> Hasta ilişkisini kur
         hasta.getHastaliklar().forEach(h -> h.setHasta(hasta));
 
         return hastaMapper.toDTO(hastaRepository.save(hasta));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public HastaResponseDTO getById(Long hastaId) {
+        return hastaMapper.toDTO(getHasta(hastaId));
     }
 
     // ─── Güncelleme metodları ───────────────────────────────────────────────
 
     @Override
     @Transactional
-    public void updateBoy(Hasta hasta, Double boy) {
+    public void updateBoy(Long hastaId, Double boy) {
+        Hasta hasta = getHasta(hastaId);
         hasta.setBoy(boy);
         hastaRepository.save(hasta);
     }
 
     @Override
     @Transactional
-    public void updateKilo(Hasta hasta, Double kilo) {
+    public void updateKilo(Long hastaId, Double kilo) {
+        Hasta hasta = getHasta(hastaId);
         hasta.setKilo(kilo);
         hastaRepository.save(hasta);
     }
 
     @Override
     @Transactional
-    public void updateIletisim(Hasta hasta, IletisimBilgisi iletisim) {
+    public void updateIletisim(Long hastaId, IletisimBilgisi iletisim) {
+        Hasta hasta = getHasta(hastaId);
+
         IletisimBilgisi mevcut = hasta.getIletisimBilgisi();
         mevcut.setIsim(iletisim.getIsim());
         mevcut.setSoyisim(iletisim.getSoyisim());
         mevcut.setTelefon(iletisim.getTelefon());
         mevcut.setDoğumTarihi(iletisim.getDoğumTarihi());
-        // IletisimBilgisi alanlarını ihtiyaca göre genişlet
+
         iletisimRepository.save(mevcut);
     }
 
     @Override
     @Transactional
-    public void updatePassword(Hasta hasta, String password) {
+    public void updatePassword(Long hastaId, String password) {
+        Hasta hasta = getHasta(hastaId);
         hasta.setPassword(passwordEncoder.encode(password));
         hastaRepository.save(hasta);
     }
 
     @Override
     @Transactional
-    public void updateEmail(Hasta hasta, String email) {
+    public void updateEmail(Long hastaId, String email) {
+        Hasta hasta = getHasta(hastaId);
         hasta.setEmail(email);
         hastaRepository.save(hasta);
+    }
+
+    @Override
+    public Optional<Hasta> findById(Long hastaId) {
+        return hastaRepository.findById(hastaId);
     }
 
     // ─── Hastalık CRUD metodları ────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
-    public List<HastalikDTO> getHastaliklar(Hasta hasta) {
-        return hasta.getHastaliklar().stream().map(hastalikMapper::toDTO).collect(Collectors.toList());
+    public List<HastalikDTO> getHastaliklar(Long hastaId) {
+        return getHasta(hastaId)
+                .getHastaliklar()
+                .stream()
+                .map(hastalikMapper::toDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public void createHastalik(Hasta hasta, String hastalik) {
+    public void createHastalik(Long hastaId, String hastalik) {
+        Hasta hasta = getHasta(hastaId);
+
         Hastalik yeni = new Hastalik(hastalik);
         yeni.setHasta(hasta);
         hasta.getHastaliklar().add(yeni);
+
         hastalikRepository.save(yeni);
     }
 
     @Override
     @Transactional
-    public void updateHastalik(Hasta hasta, Long id, String hastalik) {
+    public void updateHastalik(Long hastaId, Long id, String hastalik) {
         Hastalik mevcut = hastalikRepository.findById(id)
-                .filter(h -> h.getHasta().getId().equals(hasta.getId()))
+                .filter(h -> h.getHasta().getId().equals(hastaId))
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Hastalık bulunamadı: " + id));
 
@@ -129,13 +158,15 @@ public class HastaServiceImpl implements HastaService {
 
     @Override
     @Transactional
-    public void deleteHastalik(Hasta hasta, Long id) {
+    public void deleteHastalik(Long hastaId, Long id) {
         Hastalik silinecek = hastalikRepository.findById(id)
-                .filter(h -> h.getHasta().getId().equals(hasta.getId()))
+                .filter(h -> h.getHasta().getId().equals(hastaId))
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Hastalık bulunamadı: " + id));
 
+        Hasta hasta = getHasta(hastaId);
         hasta.getHastaliklar().remove(silinecek);
+
         hastalikRepository.delete(silinecek);
     }
 }
