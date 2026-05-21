@@ -12,13 +12,18 @@ import java.util.List;
 
 @Mapper(
         componentModel = "spring",
-        uses = IletisimBilgisiMapper.class
+        uses = {IletisimBilgisiMapper.class, HastalikMapper.class, HastaRandevuMapper.class}
 )
 public interface HastaMapper {
 
     Hasta toEntity(HastaRequestDTO dto);
 
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "iletisimBilgisi", target = "iletisimBilgisi")
     @Mapping(source = "hastaliklar", target = "hastaliklar")
+    @Mapping(source = "boy", target = "boy")
+    @Mapping(source = "kilo", target = "kilo")
+    @Mapping(source = "randevular", target = "randevular")
     HastaResponseDTO toDTO(Hasta entity);
 
     default List<String> map(List<String> value) {

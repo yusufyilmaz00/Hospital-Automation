@@ -1,6 +1,6 @@
 package com.seproje.hospital.hasta;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.seproje.hospital.auth.AuthUserRepository;
 
-public interface HastaRepository extends JpaRepository<Hasta, Long> {
+public interface HastaRepository extends AuthUserRepository<Hasta> {
 }
