@@ -11,7 +11,8 @@ import jakarta.persistence.*;
 @MappedSuperclass
 public abstract class Personel implements AuthUser {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "personel_seq")
+    @SequenceGenerator(name = "personel_seq", sequenceName = "personel_id_seq", allocationSize = 1)
     private Long id;
 
     @Column(nullable = false)
