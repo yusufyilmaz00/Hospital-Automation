@@ -10,8 +10,10 @@ import com.seproje.hospital.Hastane.Bolum;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
+@Setter
 @Entity
 @Table(name = "doktor")
 public class Doktor extends Personel {
