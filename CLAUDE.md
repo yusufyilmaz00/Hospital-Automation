@@ -85,11 +85,9 @@ mvnw spring-boot:run
 ## Tamamlanan Use Case'ler
 
 - [x] **Hasta Sisteme Kayıt** — KG, hasta kaydeder; hasta login olup kendi bilgilerini görür
-- [ ] **Randevu Oluşturma** — RG, doktor seçip randevu oluşturur; hasta randevusunu görür *(devam ediyor)*
+- [x] **Randevu Oluşturma** — RG, doktor seçip randevu oluşturur; hasta randevusunu görür
 
 ## Aktif Branch
 
 `feature/randevu-olusturma` — Randevu oluşturma use case implementasyonu devam ediyor.
 
-### Bilinen Açık Sorun
-`doktor` tablosuna yeni kayıt eklenirken `DataIntegrityViolationException` alınıyor. Kök neden araştırılıyor.
