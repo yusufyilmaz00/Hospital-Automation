@@ -32,9 +32,11 @@ public class Hasta implements AuthUser {
     @JoinColumn(name = "iletisim_bilgisi_id", nullable = false)
     private IletisimBilgisi iletisimBilgisi;
 
+    @Builder.Default
     @OneToMany(mappedBy = "hasta", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Randevu> randevular = new ArrayList<>();
 
+    @Builder.Default
     @OneToMany(mappedBy = "hasta", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Hastalik> hastaliklar = new ArrayList<>();
 
