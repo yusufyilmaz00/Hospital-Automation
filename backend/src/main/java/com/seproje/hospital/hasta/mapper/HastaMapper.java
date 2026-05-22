@@ -16,6 +16,8 @@ import java.util.List;
 )
 public interface HastaMapper {
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "randevular", ignore = true)
     Hasta toEntity(HastaRequestDTO dto);
 
     @Mapping(source = "id", target = "id")

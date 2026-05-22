@@ -7,6 +7,7 @@ import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface HastalikMapper {
+    @Mapping(target = "hasta", ignore = true)
     Hastalik toEntity(HastalikDTO dto);
 
     @Mapping(source = "id", target = "id")
