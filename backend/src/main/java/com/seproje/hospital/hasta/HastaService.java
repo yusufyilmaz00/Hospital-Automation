@@ -11,6 +11,7 @@ import java.util.Optional;
 public interface HastaService {
     HastaResponseDTO create(HastaRequestDTO dto);
     HastaResponseDTO getById(Long hastaId);
+    List<HastaResponseDTO> getAll();
     void updateBoy(Long hastaId, Double boy);
     void updateKilo(Long hastaId, Double kilo);
     void updateIletisim(Long hastaId, IletisimBilgisi iletisim);
