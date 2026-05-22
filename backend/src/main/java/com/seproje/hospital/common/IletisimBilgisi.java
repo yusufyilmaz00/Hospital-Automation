@@ -29,8 +29,7 @@ public class IletisimBilgisi {
     @Column(nullable = false, length = 20)
     private String telefon;
 
-    @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "text")
     private String adres;
 
     @Column(nullable = false)

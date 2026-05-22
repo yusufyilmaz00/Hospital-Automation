@@ -10,10 +10,6 @@ import jakarta.persistence.*;
 @Table(name = "kayit_gorevlisi")
 public class KayitGorevlisi extends Personel {
 
-    public void kayitIslemiYap() {
-        // Kayıt işlemi yapmak için gerekli kodlar buraya gelecek
-    }
-
     @Override
     public UserType getUserType() {
         return UserType.KAYIT_GOREVLISI;

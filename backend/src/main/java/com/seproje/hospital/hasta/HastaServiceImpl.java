@@ -67,6 +67,14 @@ public class HastaServiceImpl implements HastaService {
         return hastaMapper.toDTO(getHasta(hastaId));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<HastaResponseDTO> getAll() {
+        return hastaRepository.findAll().stream()
+                .map(hastaMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+
     // ─── Güncelleme metodları ───────────────────────────────────────────────
 
     @Override

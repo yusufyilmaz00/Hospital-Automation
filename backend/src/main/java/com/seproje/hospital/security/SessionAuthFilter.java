@@ -40,7 +40,8 @@ public class SessionAuthFilter extends OncePerRequestFilter {
     }
 
     private Optional<Session> getSession(String token) {
-        return sessionService.getByToken(token);
+        return sessionService.getByToken(token)
+                .filter(sessionService::isValid);
     }
 
     private void setAuth(Session session) {
