@@ -34,7 +34,6 @@ public class SessionAuthFilter extends OncePerRequestFilter {
 
         CookieUtil.getCookie(request, SessionConstants.COOKIE_NAME).
                 flatMap(this::getSession)
-                .flatMap(this::extractUser)
                 .ifPresent(this::setAuth);
 
         filterChain.doFilter(request, response);
@@ -44,13 +43,7 @@ public class SessionAuthFilter extends OncePerRequestFilter {
         return sessionService.getByToken(token);
     }
 
-    private Optional<? extends AuthUser> extractUser(Session session) {
-        UserType type = session.getUserType();
-        JpaRepository<? extends AuthUser, Long> repository = authUserService.getRepository(type);
-        return repository.findById(session.getUserId());
-    }
-
-    private void setAuth(AuthUser user) {
-        SecurityContextUtil.set(user);
+    private void setAuth(Session session) {
+        SecurityContextUtil.set(session.getUserId(), session.getUserType());
     }
 }

@@ -6,18 +6,21 @@ import com.seproje.hospital.hasta.dto.HastaResponseDTO;
 import com.seproje.hospital.hasta.dto.HastalikDTO;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface HastaService {
     HastaResponseDTO create(HastaRequestDTO dto);
+    HastaResponseDTO getById(Long hastaId);
+    void updateBoy(Long hastaId, Double boy);
+    void updateKilo(Long hastaId, Double kilo);
+    void updateIletisim(Long hastaId, IletisimBilgisi iletisim);
+    void updatePassword(Long hastaId, String password);
+    void updateEmail(Long hastaId, String email);
 
-    void updateBoy(Hasta hasta, Double boy);
-    void updateKilo(Hasta hasta, Double kilo);
-    void updateIletisim(Hasta hasta, IletisimBilgisi iletisim);
-    void updatePassword(Hasta hasta, String password);
-    void updateEmail(Hasta hasta, String email);
+    Optional<Hasta> findById(Long hastaId);
 
-    List<HastalikDTO> getHastaliklar(Hasta hasta);
-    void createHastalik(Hasta hasta, String hastalik);
-    void updateHastalik(Hasta hasta, Long id, String hastalik);
-    void deleteHastalik(Hasta hasta, Long id);
+    List<HastalikDTO> getHastaliklar(Long hastaId);
+    void createHastalik(Long hastaId, String hastalik);
+    void updateHastalik(Long hastaId, Long hastalikId, String hastalik);
+    void deleteHastalik(Long hastaId, Long hastalikId);
 }

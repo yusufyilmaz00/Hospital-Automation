@@ -1,7 +1,7 @@
 package com.seproje.hospital.randevu;
 
 import com.seproje.hospital.hasta.Hasta;
-import com.seproje.hospital.personel.Doktor;
+import com.seproje.hospital.personel.doktor.Doktor;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
