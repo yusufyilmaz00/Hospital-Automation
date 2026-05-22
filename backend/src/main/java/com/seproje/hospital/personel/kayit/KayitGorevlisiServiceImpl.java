@@ -1,7 +1,5 @@
 package com.seproje.hospital.personel.kayit;
 
-import com.seproje.hospital.common.IletisimBilgisi;
-import com.seproje.hospital.common.IletisimBilgisiRepository;
 import com.seproje.hospital.common.mapper.IletisimBilgisiMapper;
 import com.seproje.hospital.personel.kayit.dto.KayitGorevlisiRequestDTO;
 import com.seproje.hospital.personel.kayit.dto.KayitGorevlisiResponseDTO;
@@ -17,7 +15,6 @@ import java.util.List;
 public class KayitGorevlisiServiceImpl implements KayitGorevlisiService {
 
     private final KayitGorevlisiRepository repository;
-    private final IletisimBilgisiRepository iletisimRepository;
     private final IletisimBilgisiMapper iletisimMapper;
     private final PasswordEncoder passwordEncoder;
 
@@ -29,10 +26,7 @@ public class KayitGorevlisiServiceImpl implements KayitGorevlisiService {
         kg.setPassword(passwordEncoder.encode(dto.getPassword()));
 
         if (dto.getIletisimBilgisi() != null) {
-            IletisimBilgisi iletisim = iletisimRepository.save(
-                    iletisimMapper.toEntity(dto.getIletisimBilgisi())
-            );
-            kg.setContactInformation(iletisim);
+            kg.setContactInformation(iletisimMapper.toEntity(dto.getIletisimBilgisi()));
         }
 
         return toDTO(repository.save(kg));
