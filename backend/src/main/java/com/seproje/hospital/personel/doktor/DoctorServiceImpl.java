@@ -3,7 +3,11 @@ package com.seproje.hospital.personel.doktor;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.seproje.hospital.common.mapper.IletisimBilgisiMapper;
+import com.seproje.hospital.personel.doktor.dto.DoktorCreateDTO;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.seproje.hospital.hasta.Hasta;
 import com.seproje.hospital.randevu.Randevu;
@@ -15,6 +19,20 @@ import lombok.RequiredArgsConstructor;
 public class DoctorServiceImpl implements DoctorService {
 
     private final DoctorRepository doktorRepository;
+    private final IletisimBilgisiMapper iletisimMapper;
+    private final PasswordEncoder passwordEncoder;
+
+    @Override
+    @Transactional
+    public Doktor createDoktor(DoktorCreateDTO dto) {
+        Doktor doktor = new Doktor();
+        doktor.setEmail(dto.getEmail());
+        doktor.setPassword(passwordEncoder.encode(dto.getPassword()));
+        doktor.setDepartment(dto.getBolum());
+        doktor.setUnvan(dto.getUnvan());
+        doktor.setContactInformation(iletisimMapper.toEntity(dto.getIletisimBilgisi()));
+        return doktorRepository.save(doktor);
+    }
 
     @Override
     public List<Doktor> getAllDoctors() {
@@ -100,12 +118,10 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     public Double calculateSalary(Long doctorId) {
-
         Doktor doktor = getDoctorById(doctorId);
-
+        if (doktor.getUnvan() == null) return 0.0;
         double baseSalary = doktor.getUnvan().getHourlyRate() * 160;
         double bonus = doktor.getActiveReservations().size() * 20;
-
         return baseSalary + bonus;
     }
 }
