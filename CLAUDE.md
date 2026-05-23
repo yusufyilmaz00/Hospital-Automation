@@ -101,7 +101,7 @@ mvnw spring-boot:run
 - [x] **Hasta Sisteme Kayıt Edilir** — KG, hasta kaydeder; hasta login olup kendi bilgilerini görür
 - [x] **Rezervasyon Alınması** — RG, doktor seçip randevu oluşturur; hasta randevusunu görür
   - [ ] «extend» **Alternatif Tarih Önerilmesi** — Uygun doktor yoksa RG alternatif tarih önerir
-- [ ] **Muayene** — Doktor, randevuya gelen hastanın bilgilerini görür ve muayene yapar
+- [x] **Muayene** — Doktor, randevuya gelen hastanın bilgilerini görür ve muayene yapar
   - [x] «include» **Hasta Bilgilerinin Görüntülenmesi** — Doktor hastanın tüm kaydını görür
   - [x] «extend» **Hasta Kaydına Tedavi Ekleme** — Doktor tedaviyi hasta kaydına ekler
   - [x] «extend» **Rapor/Reçete Verilmesi** — Doktor rapor veya reçete yazar
