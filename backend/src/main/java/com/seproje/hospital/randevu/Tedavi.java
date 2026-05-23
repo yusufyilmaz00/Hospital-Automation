@@ -1,9 +1,16 @@
 package com.seproje.hospital.randevu;
 
 import jakarta.persistence.*;
+import lombok.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "tedavi")
 public class Tedavi {
@@ -24,27 +31,6 @@ public class Tedavi {
     private Randevu randevu;
 
     @OneToMany(mappedBy = "tedavi", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<Reçete> reçeteler = new ArrayList<>();
-
-    protected Tedavi() {}
-
-    public Tedavi(TedaviTipi tedaviTipi, String açıklama, Randevu randevu) {
-        this.tedaviTipi = tedaviTipi;
-        this.açıklama = açıklama;
-        this.randevu = randevu;
-    }
-
-    public Long getId() { return id; }
-
-    public TedaviTipi getTedaviTipi() { return tedaviTipi; }
-
-    public void setTedaviTipi(TedaviTipi tedaviTipi) { this.tedaviTipi = tedaviTipi; }
-
-    public String getAçıklama() { return açıklama; }
-
-    public void setAçıklama(String açıklama) { this.açıklama = açıklama; }
-
-    public Randevu getRandevu() { return randevu; }
-
-    public List<Reçete> getReçeteler() { return reçeteler; }
 }

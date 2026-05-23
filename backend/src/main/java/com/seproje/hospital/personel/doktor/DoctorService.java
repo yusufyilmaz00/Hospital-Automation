@@ -1,6 +1,7 @@
 package com.seproje.hospital.personel.doktor;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.List;
 
 import com.seproje.hospital.hasta.Hasta;
@@ -29,17 +30,23 @@ public interface DoctorService {
 
     List<Randevu> getActiveReservations(Long doctorId);
 
-    void addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta);
+    Randevu addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta);
+
+    Randevu addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta, Integer sureDakika);
 
     void removeReservation(Long doctorId, Long randevuId);
 
     boolean checkAvailability(Long doctorId, LocalDateTime desiredTime);
+
+    List<LocalDateTime> isAvailable(Long doctorId, LocalDateTime start, LocalDateTime end, Duration interval);
 
     Double calculateSalary(Long doctorId);
 
     List<DoktorRandevuDTO> getMyRandevular(Long doktorId);
 
     HastaResponseDTO getHastaByRandevuId(Long doktorId, Long randevuId);
+
+    DoktorRandevuDTO updateRandevuSuresi(Long doktorId, Long randevuId, Integer sureDakika);
 
     HastaTedaviDTO addTedavi(Long doktorId, Long randevuId, TedaviRequestDTO dto);
 

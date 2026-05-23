@@ -3,16 +3,19 @@ package com.seproje.hospital.personel.randevu;
 import com.seproje.hospital.common.mapper.IletisimBilgisiMapper;
 import com.seproje.hospital.personel.doktor.DoctorService;
 import com.seproje.hospital.personel.doktor.Doktor;
+import com.seproje.hospital.personel.randevu.dto.AlternatifTarihDTO;
 import com.seproje.hospital.personel.randevu.dto.RandevuGorevlisiCreateDTO;
 import com.seproje.hospital.hasta.Hasta;
 import com.seproje.hospital.hasta.HastaService;
-import com.seproje.hospital.personel.randevu.RandevuGorevlisi;
+import com.seproje.hospital.randevu.Randevu;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +29,7 @@ public class RandevuGorevlisiServiceImpl implements RandevuGorevlisiService {
     private final DoctorService doctorService;
     private final IletisimBilgisiMapper iletisimMapper;
     private final PasswordEncoder passwordEncoder;
+    private final AlternatifTarihMapper alternatifTarihMapper;
 
     // ─── CRUD ─────────────────────────────
 
@@ -59,7 +63,13 @@ public class RandevuGorevlisiServiceImpl implements RandevuGorevlisiService {
 
     @Override
     @Transactional
-    public void randevuIslemiYap(Long hastaId, Long doktorId, LocalDateTime randevuZamani) {
+    public Randevu randevuIslemiYap(Long hastaId, Long doktorId, LocalDateTime randevuZamani) {
+        return randevuIslemiYap(hastaId, doktorId, randevuZamani, 30);
+    }
+
+    @Override
+    @Transactional
+    public Randevu randevuIslemiYap(Long hastaId, Long doktorId, LocalDateTime randevuZamani, Integer sureDakika) {
 
         Optional<Hasta> hastaOptional = hastaService.findById(hastaId);
 
@@ -69,13 +79,13 @@ public class RandevuGorevlisiServiceImpl implements RandevuGorevlisiService {
 
         Hasta hasta = hastaOptional.get();
 
-        Doktor doktor = doctorService.getDoctorById(doktorId);
+        doctorService.getDoctorById(doktorId);
 
         if (!doctorService.checkAvailability(doktorId, randevuZamani)) {
             throw new IllegalArgumentException("Doctor not available at: " + randevuZamani);
         }
 
-        doctorService.addReservation(doktorId, randevuZamani, hasta);
+        return doctorService.addReservation(doktorId, randevuZamani, hasta, sureDakika);
     }
 
     @Override
@@ -87,5 +97,25 @@ public class RandevuGorevlisiServiceImpl implements RandevuGorevlisiService {
     @Override
     public boolean checkDoctorAvailability(Long doktorId, LocalDateTime desiredTime) {
         return doctorService.checkAvailability(doktorId, desiredTime);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AlternatifTarihDTO> alternatifTarihleriListele(LocalDate haftaBaslangic) {
+        if (haftaBaslangic == null) {
+            throw new IllegalArgumentException("Hafta başlangıcı zorunludur.");
+        }
+
+        LocalDateTime start = haftaBaslangic.atStartOfDay();
+        LocalDateTime end = haftaBaslangic.plusWeeks(1).atStartOfDay();
+        Duration interval = Duration.ofMinutes(30);
+
+        return doctorService.getAllDoctors().stream()
+                .map(doktor -> alternatifTarihMapper.toDTO(
+                        doktor,
+                        doctorService.isAvailable(doktor.getId(), start, end, interval)
+                ))
+                .filter(dto -> !dto.getTarihler().isEmpty())
+                .toList();
     }
 }

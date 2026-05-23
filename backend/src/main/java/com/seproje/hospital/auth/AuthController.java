@@ -4,6 +4,8 @@ import com.seproje.hospital.auth.dto.AuthRequest;
 import com.seproje.hospital.session.Session;
 import com.seproje.hospital.session.SessionConstants;
 import com.seproje.hospital.session.SessionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,11 +19,16 @@ import java.util.Arrays;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Auth", description = "Session cookie tabanlı giriş ve çıkış işlemleri")
 public class AuthController {
 
     private final AuthService authService;
     private final SessionService sessionService;
 
+    @Operation(
+            summary = "Kullanıcı girişi yapar",
+            description = "email ve password ile giriş yapar. Başarılı cevapta HTTP-only session cookie set edilir; sonraki /api çağrılarında bu cookie kullanılır."
+    )
     @PostMapping("/login")
     public ResponseEntity<String> login(@Valid @RequestBody AuthRequest request, HttpServletResponse response) {
         Session session = authService.login(request);
@@ -36,6 +43,10 @@ public class AuthController {
         return ResponseEntity.ok("ok");
     }
 
+    @Operation(
+            summary = "Kullanıcı çıkışı yapar",
+            description = "Aktif session cookie varsa invalidate eder ve cookie'yi tarayıcıdan siler."
+    )
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
         if (request.getCookies() != null) {

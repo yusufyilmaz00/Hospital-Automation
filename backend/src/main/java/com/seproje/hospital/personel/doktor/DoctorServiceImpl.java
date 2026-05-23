@@ -1,6 +1,9 @@
 package com.seproje.hospital.personel.doktor;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.seproje.hospital.common.mapper.IletisimBilgisiMapper;
@@ -16,6 +19,7 @@ import com.seproje.hospital.randevu.RandevuRepository;
 import com.seproje.hospital.randevu.RaporRepository;
 import com.seproje.hospital.randevu.Reçete;
 import com.seproje.hospital.randevu.Tedavi;
+import com.seproje.hospital.randevu.TedaviRepository;
 import com.seproje.hospital.randevu.dto.RaporRequestDTO;
 import com.seproje.hospital.randevu.dto.RaporResponseDTO;
 import com.seproje.hospital.randevu.dto.ReceteDTO;
@@ -51,6 +55,7 @@ public class DoctorServiceImpl implements DoctorService {
     private final RaporMapper raporMapper;
     private final ReceteMapper receteMapper;
     private final ReceteRepository receteRepository;
+    private final TedaviRepository tedaviRepository;
     private final HastaService hastaService;
 
     @Override
@@ -87,8 +92,9 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Randevu> getActiveReservations(Long doctorId) {
-        return getDoctorById(doctorId).getActiveReservations();
+        return new ArrayList<>(getDoctorById(doctorId).getActiveReservations());
     }
 
     // ─────────────────────────────────────────────
@@ -96,7 +102,14 @@ public class DoctorServiceImpl implements DoctorService {
     // ─────────────────────────────────────────────
 
     @Override
-    public void addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta) {
+    @Transactional
+    public Randevu addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta) {
+        return addReservation(doctorId, randevuZamani, hasta, 30);
+    }
+
+    @Override
+    @Transactional
+    public Randevu addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta, Integer sureDakika) {
 
         Doktor doktor = getDoctorById(doctorId);
 
@@ -104,19 +117,20 @@ public class DoctorServiceImpl implements DoctorService {
             throw new IllegalArgumentException("The doctor is not available at the desired time.");
         }
 
-        Randevu newRandevu = new Randevu(
-                randevuZamani,
-                hasta,
-                doktor,
-                calculateSalary(doctorId)
-        );
+        Randevu newRandevu = Randevu.builder()
+                .randevuZamani(randevuZamani)
+                .doktor(doktor)
+                .hasta(hasta)
+                .sureDakika(sureDakika)
+                .build();
 
         doktor.getActiveReservations().add(newRandevu);
 
-        doktorRepository.save(doktor);
+        return randevuRepository.save(newRandevu);
     }
 
     @Override
+    @Transactional
     public void removeReservation(Long doctorId, Long randevuId) {
 
         Doktor doktor = getDoctorById(doctorId);
@@ -128,6 +142,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean checkAvailability(Long doctorId, LocalDateTime desiredTime) {
 
         Doktor doktor = getDoctorById(doctorId);
@@ -148,6 +163,28 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<LocalDateTime> isAvailable(Long doctorId, LocalDateTime start, LocalDateTime end, Duration interval) {
+        if (start == null || end == null || interval == null || interval.isZero() || interval.isNegative()) {
+            throw new IllegalArgumentException("Start, end and interval must be valid.");
+        }
+        if (!start.isBefore(end)) {
+            throw new IllegalArgumentException("Start must be before end.");
+        }
+
+        List<LocalDateTime> availableTimes = new ArrayList<>();
+        LocalDateTime current = start;
+        while (current.isBefore(end)) {
+            if (checkAvailability(doctorId, current)) {
+                availableTimes.add(current);
+            }
+            current = current.plus(interval);
+        }
+        return availableTimes;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Double calculateSalary(Long doctorId) {
         Doktor doktor = getDoctorById(doctorId);
         if (doktor.getUnvan() == null) return 0.0;
@@ -179,12 +216,28 @@ public class DoctorServiceImpl implements DoctorService {
         Randevu randevu = randevuRepository.findByIdAndDoktorId(randevuId, doktorId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Randevu bulunamadı veya bu randevu size ait değil: " + randevuId));
+        odemeAlinmamisOlmali(randevu);
 
-        Tedavi tedavi = new Tedavi(dto.getTedaviTipi(), dto.getAciklama(), randevu);
-        randevu.getTedaviler().add(tedavi);
-        randevuRepository.save(randevu);
+        Tedavi tedavi = Tedavi.builder()
+                .tedaviTipi(dto.getTedaviTipi())
+                .açıklama(dto.getAciklama())
+                .randevu(randevu)
+                .build();
 
-        return hastaTedaviMapper.toDTO(tedavi);
+        return hastaTedaviMapper.toDTO(tedaviRepository.save(tedavi));
+    }
+
+    @Override
+    @Transactional
+    public DoktorRandevuDTO updateRandevuSuresi(Long doktorId, Long randevuId, Integer sureDakika) {
+        Randevu randevu = randevuRepository.findByIdAndDoktorId(randevuId, doktorId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Randevu bulunamadı veya bu randevu size ait değil: " + randevuId));
+
+        odemeAlinmamisOlmali(randevu);
+
+        randevu.setSureDakika(sureDakika);
+        return doktorRandevuMapper.toDTO(randevuRepository.save(randevu));
     }
 
     @Override
@@ -193,12 +246,12 @@ public class DoctorServiceImpl implements DoctorService {
         Randevu randevu = randevuRepository.findByIdAndDoktorId(randevuId, doktorId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Randevu bulunamadı veya bu randevu size ait değil: " + randevuId));
+        odemeAlinmamisOlmali(randevu);
 
-        boolean removed = randevu.getTedaviler().removeIf(t -> t.getId().equals(tedaviId));
-        if (!removed) {
-            throw new EntityNotFoundException("Tedavi bulunamadı: " + tedaviId);
-        }
-        randevuRepository.save(randevu);
+        Tedavi tedavi = tedaviRepository.findByIdAndRandevuIdAndRandevuDoktorId(tedaviId, randevuId, doktorId)
+                .orElseThrow(() -> new EntityNotFoundException("Tedavi bulunamadı: " + tedaviId));
+
+        tedaviRepository.delete(tedavi);
     }
 
     @Override
@@ -207,10 +260,9 @@ public class DoctorServiceImpl implements DoctorService {
         Randevu randevu = randevuRepository.findByIdAndDoktorId(randevuId, doktorId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Randevu bulunamadı veya bu randevu size ait değil: " + randevuId));
+        odemeAlinmamisOlmali(randevu);
 
-        Tedavi tedavi = randevu.getTedaviler().stream()
-                .filter(t -> t.getId().equals(tedaviId))
-                .findFirst()
+        Tedavi tedavi = tedaviRepository.findByIdAndRandevuIdAndRandevuDoktorId(tedaviId, randevuId, doktorId)
                 .orElseThrow(() -> new EntityNotFoundException("Tedavi bulunamadı: " + tedaviId));
 
         String generatedBarkod;
@@ -220,18 +272,10 @@ public class DoctorServiceImpl implements DoctorService {
 
         final String barkod = generatedBarkod;
         Reçete recete = new Reçete(barkod, tedavi);
-        dto.getIlaclar().forEach(recete::ilaçEkle);
-        tedavi.getReçeteler().add(recete);
-        Randevu saved = randevuRepository.save(randevu);
+        List<String> ilaclar = dto.getIlaclar() == null ? Collections.emptyList() : dto.getIlaclar();
+        ilaclar.forEach(recete::ilaçEkle);
 
-        Reçete savedRecete = saved.getTedaviler().stream()
-                .filter(t -> t.getId().equals(tedaviId))
-                .flatMap(t -> t.getReçeteler().stream())
-                .filter(r -> r.getBarkod().equals(barkod))
-                .findFirst()
-                .orElse(recete);
-
-        return receteMapper.toDTO(savedRecete);
+        return receteMapper.toDTO(receteRepository.save(recete));
     }
 
     @Override
@@ -240,17 +284,16 @@ public class DoctorServiceImpl implements DoctorService {
         Randevu randevu = randevuRepository.findByIdAndDoktorId(randevuId, doktorId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Randevu bulunamadı veya bu randevu size ait değil: " + randevuId));
+        odemeAlinmamisOlmali(randevu);
 
-        Tedavi tedavi = randevu.getTedaviler().stream()
-                .filter(t -> t.getId().equals(tedaviId))
-                .findFirst()
-                .orElseThrow(() -> new EntityNotFoundException("Tedavi bulunamadı: " + tedaviId));
+        Reçete recete = receteRepository.findByIdAndTedaviIdAndTedaviRandevuIdAndTedaviRandevuDoktorId(
+                        receteId,
+                        tedaviId,
+                        randevuId,
+                        doktorId)
+                .orElseThrow(() -> new EntityNotFoundException("Reçete bulunamadı: " + receteId));
 
-        boolean removed = tedavi.getReçeteler().removeIf(r -> r.getId().equals(receteId));
-        if (!removed) {
-            throw new EntityNotFoundException("Reçete bulunamadı: " + receteId);
-        }
-        randevuRepository.save(randevu);
+        receteRepository.delete(recete);
     }
 
     @Override
@@ -259,6 +302,7 @@ public class DoctorServiceImpl implements DoctorService {
         Randevu randevu = randevuRepository.findByIdAndDoktorId(randevuId, doktorId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Randevu bulunamadı veya bu randevu size ait değil: " + randevuId));
+        odemeAlinmamisOlmali(randevu);
 
         Rapor rapor = new Rapor(dto.getIcerik(), randevu);
         return raporMapper.toDTO(raporRepository.save(rapor));
@@ -270,7 +314,14 @@ public class DoctorServiceImpl implements DoctorService {
         Rapor rapor = raporRepository.findByIdAndRandevuDoktorId(raporId, doktorId)
                 .filter(r -> r.getRandevu().getId().equals(randevuId))
                 .orElseThrow(() -> new EntityNotFoundException("Rapor bulunamadı: " + raporId));
+        odemeAlinmamisOlmali(rapor.getRandevu());
         raporRepository.delete(rapor);
+    }
+
+    private void odemeAlinmamisOlmali(Randevu randevu) {
+        if (Boolean.TRUE.equals(randevu.getOdendi())) {
+            throw new IllegalArgumentException("Ödemesi alınmış randevu güncellenemez.");
+        }
     }
 
     // ─── Hasta Bilgilerinin Yönetimi ─────────────────────────────────────────
