@@ -75,6 +75,17 @@ mvnw spring-boot:run
 | GET | `/` | — | Tüm doktorları listele |
 | GET | `/randevular` | Doktor | Kendi randevuları (hasta adı, tarih, ücret) |
 | GET | `/randevu/{id}/hasta` | Doktor | Randevudaki hastanın tam kaydı (yalnızca kendi randevusu) |
+| POST | `/randevu/{id}/tedavi` | Doktor | Randevuya tedavi ekle |
+| DELETE | `/randevu/{id}/tedavi/{tedaviId}` | Doktor | Tedavi sil |
+| POST | `/randevu/{id}/tedavi/{tedaviId}/recete` | Doktor | Tedaviye reçete ekle (barkod UUID ile üretilir) |
+| DELETE | `/randevu/{id}/tedavi/{tedaviId}/recete/{receteId}` | Doktor | Reçete sil |
+| POST | `/randevu/{id}/rapor` | Doktor | Randevuya rapor ekle |
+| DELETE | `/randevu/{id}/rapor/{raporId}` | Doktor | Rapor sil |
+| PUT | `/hasta/{hastaId}/boy` | Doktor | Hastanın boyunu güncelle |
+| PUT | `/hasta/{hastaId}/kilo` | Doktor | Hastanın kilosunu güncelle |
+| POST | `/hasta/{hastaId}/hastalik` | Doktor | Hastaya hastalık ekle |
+| PUT | `/hasta/{hastaId}/hastalik/{hastalikId}` | Doktor | Hastalık güncelle |
+| DELETE | `/hasta/{hastaId}/hastalik/{hastalikId}` | Doktor | Hastalık sil |
 
 ### Randevu Görevlisi (`/api/randevu-gorevlisi`)
 | Method | Path | Yetki | Açıklama |
@@ -92,9 +103,9 @@ mvnw spring-boot:run
   - [ ] «extend» **Alternatif Tarih Önerilmesi** — Uygun doktor yoksa RG alternatif tarih önerir
 - [ ] **Muayene** — Doktor, randevuya gelen hastanın bilgilerini görür ve muayene yapar
   - [x] «include» **Hasta Bilgilerinin Görüntülenmesi** — Doktor hastanın tüm kaydını görür
-  - [ ] «extend» **Hasta Kaydına Tedavi Ekleme** — Doktor tedaviyi hasta kaydına ekler
-  - [ ] «extend» **Rapor/Reçete Verilmesi** — Doktor rapor veya reçete yazar
-  - [ ] «extend» **Hasta Bilgilerinin Yönetimi** — Doktor hasta bilgilerini günceller
+  - [x] «extend» **Hasta Kaydına Tedavi Ekleme** — Doktor tedaviyi hasta kaydına ekler
+  - [x] «extend» **Rapor/Reçete Verilmesi** — Doktor rapor veya reçete yazar
+  - [x] «extend» **Hasta Bilgilerinin Yönetimi** — Doktor hasta bilgilerini günceller
 - [ ] **Ödeme İşleminin Yapılması** — Veznedar ücret hesaplar, ödeme alır
   - [ ] «include» **Sigorta Durumunun Sorgulanması** — Sosyal sigorta sunucusuna TCKN gönderilir
   - [ ] «extend» **İndirim Uygulanır** — Sigorta durumuna göre indirim uygulanır
