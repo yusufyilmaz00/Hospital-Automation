@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface RandevuRepository extends JpaRepository<Randevu, Long> {
 
     Optional<Randevu> findByIdAndDoktorId(Long id, Long doktorId);
+
+    boolean existsByHastaIdAndDoktorId(Long hastaId, Long doktorId);
 }

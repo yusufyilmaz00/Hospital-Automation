@@ -1,5 +1,6 @@
 package com.seproje.hospital.personel.doktor;
 
+import com.seproje.hospital.hasta.dto.HastalikRequestDTO;
 import com.seproje.hospital.hasta.dto.HastaResponseDTO;
 import com.seproje.hospital.hasta.dto.HastaTedaviDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorCreateDTO;
@@ -12,6 +13,7 @@ import com.seproje.hospital.randevu.dto.ReceteRequestDTO;
 import com.seproje.hospital.randevu.dto.TedaviRequestDTO;
 import com.seproje.hospital.security.SecurityContextUtil;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -121,6 +123,69 @@ public class DoktorController {
         return SecurityContextUtil.currentUser(Doktor.class)
                 .map(doktorId -> {
                     doctorService.removeRapor(doktorId, randevuId, raporId);
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    // ─── Hasta Bilgilerinin Yönetimi ─────────────────────────────────────────
+
+    @PutMapping("/hasta/{hastaId}/boy")
+    public ResponseEntity<Void> hastaninBoyunuGuncelle(
+            @PathVariable Long hastaId,
+            @RequestParam @Positive Double boy) {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> {
+                    doctorService.updateHastaBoy(doktorId, hastaId, boy);
+                    return ResponseEntity.ok().<Void>build();
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @PutMapping("/hasta/{hastaId}/kilo")
+    public ResponseEntity<Void> hastaninKilosunuGuncelle(
+            @PathVariable Long hastaId,
+            @RequestParam @Positive Double kilo) {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> {
+                    doctorService.updateHastaKilo(doktorId, hastaId, kilo);
+                    return ResponseEntity.ok().<Void>build();
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @PostMapping("/hasta/{hastaId}/hastalik")
+    public ResponseEntity<Void> hastalikEkle(
+            @PathVariable Long hastaId,
+            @Valid @RequestBody HastalikRequestDTO dto) {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> {
+                    doctorService.addHastalik(doktorId, hastaId, dto.getDetay());
+                    return ResponseEntity.status(HttpStatus.CREATED).<Void>build();
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @PutMapping("/hasta/{hastaId}/hastalik/{hastalikId}")
+    public ResponseEntity<Void> hastalikGuncelle(
+            @PathVariable Long hastaId,
+            @PathVariable Long hastalikId,
+            @Valid @RequestBody HastalikRequestDTO dto) {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> {
+                    doctorService.updateHastalik(doktorId, hastaId, hastalikId, dto.getDetay());
+                    return ResponseEntity.ok().<Void>build();
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @DeleteMapping("/hasta/{hastaId}/hastalik/{hastalikId}")
+    public ResponseEntity<Void> hastalikSil(
+            @PathVariable Long hastaId,
+            @PathVariable Long hastalikId) {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> {
+                    doctorService.deleteHastalik(doktorId, hastaId, hastalikId);
                     return ResponseEntity.noContent().<Void>build();
                 })
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());

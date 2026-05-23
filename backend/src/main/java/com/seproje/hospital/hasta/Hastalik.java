@@ -6,13 +6,14 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @Entity
+@Table(name = "hastalik")
 @RequiredArgsConstructor
 public class Hastalik {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String detay;
 
     @ManyToOne

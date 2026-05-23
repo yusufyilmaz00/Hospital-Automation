@@ -81,6 +81,11 @@ mvnw spring-boot:run
 | DELETE | `/randevu/{id}/tedavi/{tedaviId}/recete/{receteId}` | Doktor | Reçete sil |
 | POST | `/randevu/{id}/rapor` | Doktor | Randevuya rapor ekle |
 | DELETE | `/randevu/{id}/rapor/{raporId}` | Doktor | Rapor sil |
+| PUT | `/hasta/{hastaId}/boy` | Doktor | Hastanın boyunu güncelle |
+| PUT | `/hasta/{hastaId}/kilo` | Doktor | Hastanın kilosunu güncelle |
+| POST | `/hasta/{hastaId}/hastalik` | Doktor | Hastaya hastalık ekle |
+| PUT | `/hasta/{hastaId}/hastalik/{hastalikId}` | Doktor | Hastalık güncelle |
+| DELETE | `/hasta/{hastaId}/hastalik/{hastalikId}` | Doktor | Hastalık sil |
 
 ### Randevu Görevlisi (`/api/randevu-gorevlisi`)
 | Method | Path | Yetki | Açıklama |
@@ -100,7 +105,7 @@ mvnw spring-boot:run
   - [x] «include» **Hasta Bilgilerinin Görüntülenmesi** — Doktor hastanın tüm kaydını görür
   - [x] «extend» **Hasta Kaydına Tedavi Ekleme** — Doktor tedaviyi hasta kaydına ekler
   - [x] «extend» **Rapor/Reçete Verilmesi** — Doktor rapor veya reçete yazar
-  - [ ] «extend» **Hasta Bilgilerinin Yönetimi** — Doktor hasta bilgilerini günceller
+  - [x] «extend» **Hasta Bilgilerinin Yönetimi** — Doktor hasta bilgilerini günceller
 - [ ] **Ödeme İşleminin Yapılması** — Veznedar ücret hesaplar, ödeme alır
   - [ ] «include» **Sigorta Durumunun Sorgulanması** — Sosyal sigorta sunucusuna TCKN gönderilir
   - [ ] «extend» **İndirim Uygulanır** — Sigorta durumuna göre indirim uygulanır

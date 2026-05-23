@@ -52,4 +52,14 @@ public interface DoctorService {
     RaporResponseDTO addRapor(Long doktorId, Long randevuId, RaporRequestDTO dto);
 
     void removeRapor(Long doktorId, Long randevuId, Long raporId);
+
+    void updateHastaBoy(Long doktorId, Long hastaId, Double boy);
+
+    void updateHastaKilo(Long doktorId, Long hastaId, Double kilo);
+
+    void addHastalik(Long doktorId, Long hastaId, String detay);
+
+    void updateHastalik(Long doktorId, Long hastaId, Long hastalikId, String detay);
+
+    void deleteHastalik(Long doktorId, Long hastaId, Long hastalikId);
 }

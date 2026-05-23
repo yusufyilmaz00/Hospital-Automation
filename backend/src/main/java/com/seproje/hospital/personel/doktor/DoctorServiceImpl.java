@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.seproje.hospital.common.mapper.IletisimBilgisiMapper;
+import com.seproje.hospital.hasta.HastaService;
 import com.seproje.hospital.hasta.dto.HastaResponseDTO;
 import com.seproje.hospital.hasta.dto.HastaTedaviDTO;
 import com.seproje.hospital.hasta.mapper.HastaMapper;
@@ -50,6 +51,7 @@ public class DoctorServiceImpl implements DoctorService {
     private final RaporMapper raporMapper;
     private final ReceteMapper receteMapper;
     private final ReceteRepository receteRepository;
+    private final HastaService hastaService;
 
     @Override
     @Transactional
@@ -269,5 +271,49 @@ public class DoctorServiceImpl implements DoctorService {
                 .filter(r -> r.getRandevu().getId().equals(randevuId))
                 .orElseThrow(() -> new EntityNotFoundException("Rapor bulunamadı: " + raporId));
         raporRepository.delete(rapor);
+    }
+
+    // ─── Hasta Bilgilerinin Yönetimi ─────────────────────────────────────────
+
+    private void doktorHastaYetkisiKontrol(Long doktorId, Long hastaId) {
+        if (!randevuRepository.existsByHastaIdAndDoktorId(hastaId, doktorId)) {
+            throw new EntityNotFoundException(
+                    "Bu hastaya erişim yetkiniz yok veya hasta bulunamadı: " + hastaId);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void updateHastaBoy(Long doktorId, Long hastaId, Double boy) {
+        doktorHastaYetkisiKontrol(doktorId, hastaId);
+        hastaService.updateBoy(hastaId, boy);
+    }
+
+    @Override
+    @Transactional
+    public void updateHastaKilo(Long doktorId, Long hastaId, Double kilo) {
+        doktorHastaYetkisiKontrol(doktorId, hastaId);
+        hastaService.updateKilo(hastaId, kilo);
+    }
+
+    @Override
+    @Transactional
+    public void addHastalik(Long doktorId, Long hastaId, String detay) {
+        doktorHastaYetkisiKontrol(doktorId, hastaId);
+        hastaService.createHastalik(hastaId, detay);
+    }
+
+    @Override
+    @Transactional
+    public void updateHastalik(Long doktorId, Long hastaId, Long hastalikId, String detay) {
+        doktorHastaYetkisiKontrol(doktorId, hastaId);
+        hastaService.updateHastalik(hastaId, hastalikId, detay);
+    }
+
+    @Override
+    @Transactional
+    public void deleteHastalik(Long doktorId, Long hastaId, Long hastalikId) {
+        doktorHastaYetkisiKontrol(doktorId, hastaId);
+        hastaService.deleteHastalik(hastaId, hastalikId);
     }
 }
