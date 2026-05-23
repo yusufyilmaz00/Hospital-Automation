@@ -7,6 +7,7 @@ import com.seproje.hospital.personel.randevu.dto.AlternatifTarihDTO;
 import com.seproje.hospital.personel.randevu.dto.RandevuGorevlisiCreateDTO;
 import com.seproje.hospital.hasta.Hasta;
 import com.seproje.hospital.hasta.HastaService;
+import com.seproje.hospital.randevu.Randevu;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -62,13 +63,13 @@ public class RandevuGorevlisiServiceImpl implements RandevuGorevlisiService {
 
     @Override
     @Transactional
-    public void randevuIslemiYap(Long hastaId, Long doktorId, LocalDateTime randevuZamani) {
-        randevuIslemiYap(hastaId, doktorId, randevuZamani, 30);
+    public Randevu randevuIslemiYap(Long hastaId, Long doktorId, LocalDateTime randevuZamani) {
+        return randevuIslemiYap(hastaId, doktorId, randevuZamani, 30);
     }
 
     @Override
     @Transactional
-    public void randevuIslemiYap(Long hastaId, Long doktorId, LocalDateTime randevuZamani, Integer sureDakika) {
+    public Randevu randevuIslemiYap(Long hastaId, Long doktorId, LocalDateTime randevuZamani, Integer sureDakika) {
 
         Optional<Hasta> hastaOptional = hastaService.findById(hastaId);
 
@@ -84,7 +85,7 @@ public class RandevuGorevlisiServiceImpl implements RandevuGorevlisiService {
             throw new IllegalArgumentException("Doctor not available at: " + randevuZamani);
         }
 
-        doctorService.addReservation(doktorId, randevuZamani, hasta, sureDakika);
+        return doctorService.addReservation(doktorId, randevuZamani, hasta, sureDakika);
     }
 
     @Override

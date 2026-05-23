@@ -30,9 +30,9 @@ public interface DoctorService {
 
     List<Randevu> getActiveReservations(Long doctorId);
 
-    void addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta);
+    Randevu addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta);
 
-    void addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta, Integer sureDakika);
+    Randevu addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta, Integer sureDakika);
 
     void removeReservation(Long doctorId, Long randevuId);
 
