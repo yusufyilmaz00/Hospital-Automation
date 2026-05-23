@@ -73,6 +73,8 @@ mvnw spring-boot:run
 |--------|------|-------|----------|
 | POST | `/register` | — | Doktor kaydı (admin endpoint) |
 | GET | `/` | — | Tüm doktorları listele |
+| GET | `/randevular` | Doktor | Kendi randevuları (hasta adı, tarih, ücret) |
+| GET | `/randevu/{id}/hasta` | Doktor | Randevudaki hastanın tam kaydı (yalnızca kendi randevusu) |
 
 ### Randevu Görevlisi (`/api/randevu-gorevlisi`)
 | Method | Path | Yetki | Açıklama |
@@ -89,7 +91,7 @@ mvnw spring-boot:run
 - [x] **Rezervasyon Alınması** — RG, doktor seçip randevu oluşturur; hasta randevusunu görür
   - [ ] «extend» **Alternatif Tarih Önerilmesi** — Uygun doktor yoksa RG alternatif tarih önerir
 - [ ] **Muayene** — Doktor, randevuya gelen hastanın bilgilerini görür ve muayene yapar
-  - [ ] «include» **Hasta Bilgilerinin Görüntülenmesi** — Doktor hastanın tüm kaydını görür
+  - [x] «include» **Hasta Bilgilerinin Görüntülenmesi** — Doktor hastanın tüm kaydını görür
   - [ ] «extend» **Hasta Kaydına Tedavi Ekleme** — Doktor tedaviyi hasta kaydına ekler
   - [ ] «extend» **Rapor/Reçete Verilmesi** — Doktor rapor veya reçete yazar
   - [ ] «extend» **Hasta Bilgilerinin Yönetimi** — Doktor hasta bilgilerini günceller
@@ -124,5 +126,5 @@ Swagger/Postman'da hangi endpoint'e hangi alan adını gönderdiğine dikkat et.
 
 ## Aktif Branch
 
-`feature/muayene` — Muayene use case implementasyonu.
+`main` — Muayene use case implementasyonu devam ediyor.
 
