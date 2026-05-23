@@ -1,9 +1,11 @@
 package com.seproje.hospital.personel.doktor;
 
 import com.seproje.hospital.hasta.dto.HastaResponseDTO;
+import com.seproje.hospital.hasta.dto.HastaTedaviDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorCreateDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorRandevuDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorResponseDTO;
+import com.seproje.hospital.randevu.dto.TedaviRequestDTO;
 import com.seproje.hospital.security.SecurityContextUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +51,28 @@ public class DoktorController {
                 .map(doktorId -> ResponseEntity.ok(
                         doctorService.getHastaByRandevuId(doktorId, randevuId)
                 ))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @PostMapping("/randevu/{randevuId}/tedavi")
+    public ResponseEntity<HastaTedaviDTO> tedaviEkle(
+            @PathVariable Long randevuId,
+            @Valid @RequestBody TedaviRequestDTO dto) {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> ResponseEntity.status(HttpStatus.CREATED)
+                        .body(doctorService.addTedavi(doktorId, randevuId, dto)))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @DeleteMapping("/randevu/{randevuId}/tedavi/{tedaviId}")
+    public ResponseEntity<Void> tedaviSil(
+            @PathVariable Long randevuId,
+            @PathVariable Long tedaviId) {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> {
+                    doctorService.removeTedavi(doktorId, randevuId, tedaviId);
+                    return ResponseEntity.noContent().<Void>build();
+                })
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 }

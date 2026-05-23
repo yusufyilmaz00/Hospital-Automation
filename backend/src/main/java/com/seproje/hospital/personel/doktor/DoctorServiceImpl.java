@@ -5,10 +5,14 @@ import java.util.List;
 
 import com.seproje.hospital.common.mapper.IletisimBilgisiMapper;
 import com.seproje.hospital.hasta.dto.HastaResponseDTO;
+import com.seproje.hospital.hasta.dto.HastaTedaviDTO;
 import com.seproje.hospital.hasta.mapper.HastaMapper;
+import com.seproje.hospital.hasta.mapper.HastaTedaviMapper;
 import com.seproje.hospital.personel.doktor.dto.DoktorCreateDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorRandevuDTO;
 import com.seproje.hospital.randevu.RandevuRepository;
+import com.seproje.hospital.randevu.Tedavi;
+import com.seproje.hospital.randevu.dto.TedaviRequestDTO;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -29,6 +33,7 @@ public class DoctorServiceImpl implements DoctorService {
     private final RandevuRepository randevuRepository;
     private final DoktorRandevuMapper doktorRandevuMapper;
     private final HastaMapper hastaMapper;
+    private final HastaTedaviMapper hastaTedaviMapper;
 
     @Override
     @Transactional
@@ -148,5 +153,33 @@ public class DoctorServiceImpl implements DoctorService {
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Randevu bulunamadı veya bu randevu size ait değil: " + randevuId));
         return hastaMapper.toDTO(randevu.getHasta());
+    }
+
+    @Override
+    @Transactional
+    public HastaTedaviDTO addTedavi(Long doktorId, Long randevuId, TedaviRequestDTO dto) {
+        Randevu randevu = randevuRepository.findByIdAndDoktorId(randevuId, doktorId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Randevu bulunamadı veya bu randevu size ait değil: " + randevuId));
+
+        Tedavi tedavi = new Tedavi(dto.getTedaviTipi(), dto.getAciklama(), randevu);
+        randevu.getTedaviler().add(tedavi);
+        randevuRepository.save(randevu);
+
+        return hastaTedaviMapper.toDTO(tedavi);
+    }
+
+    @Override
+    @Transactional
+    public void removeTedavi(Long doktorId, Long randevuId, Long tedaviId) {
+        Randevu randevu = randevuRepository.findByIdAndDoktorId(randevuId, doktorId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Randevu bulunamadı veya bu randevu size ait değil: " + randevuId));
+
+        boolean removed = randevu.getTedaviler().removeIf(t -> t.getId().equals(tedaviId));
+        if (!removed) {
+            throw new EntityNotFoundException("Tedavi bulunamadı: " + tedaviId);
+        }
+        randevuRepository.save(randevu);
     }
 }

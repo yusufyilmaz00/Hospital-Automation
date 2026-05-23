@@ -75,6 +75,8 @@ mvnw spring-boot:run
 | GET | `/` | — | Tüm doktorları listele |
 | GET | `/randevular` | Doktor | Kendi randevuları (hasta adı, tarih, ücret) |
 | GET | `/randevu/{id}/hasta` | Doktor | Randevudaki hastanın tam kaydı (yalnızca kendi randevusu) |
+| POST | `/randevu/{id}/tedavi` | Doktor | Randevuya tedavi ekle |
+| DELETE | `/randevu/{id}/tedavi/{tedaviId}` | Doktor | Tedavi sil |
 
 ### Randevu Görevlisi (`/api/randevu-gorevlisi`)
 | Method | Path | Yetki | Açıklama |
@@ -92,7 +94,7 @@ mvnw spring-boot:run
   - [ ] «extend» **Alternatif Tarih Önerilmesi** — Uygun doktor yoksa RG alternatif tarih önerir
 - [ ] **Muayene** — Doktor, randevuya gelen hastanın bilgilerini görür ve muayene yapar
   - [x] «include» **Hasta Bilgilerinin Görüntülenmesi** — Doktor hastanın tüm kaydını görür
-  - [ ] «extend» **Hasta Kaydına Tedavi Ekleme** — Doktor tedaviyi hasta kaydına ekler
+  - [x] «extend» **Hasta Kaydına Tedavi Ekleme** — Doktor tedaviyi hasta kaydına ekler
   - [ ] «extend» **Rapor/Reçete Verilmesi** — Doktor rapor veya reçete yazar
   - [ ] «extend» **Hasta Bilgilerinin Yönetimi** — Doktor hasta bilgilerini günceller
 - [ ] **Ödeme İşleminin Yapılması** — Veznedar ücret hesaplar, ödeme alır

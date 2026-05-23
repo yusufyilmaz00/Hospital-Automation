@@ -5,9 +5,11 @@ import java.util.List;
 
 import com.seproje.hospital.hasta.Hasta;
 import com.seproje.hospital.hasta.dto.HastaResponseDTO;
+import com.seproje.hospital.hasta.dto.HastaTedaviDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorCreateDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorRandevuDTO;
 import com.seproje.hospital.randevu.Randevu;
+import com.seproje.hospital.randevu.dto.TedaviRequestDTO;
 
 public interface DoctorService {
 
@@ -34,4 +36,8 @@ public interface DoctorService {
     List<DoktorRandevuDTO> getMyRandevular(Long doktorId);
 
     HastaResponseDTO getHastaByRandevuId(Long doktorId, Long randevuId);
+
+    HastaTedaviDTO addTedavi(Long doktorId, Long randevuId, TedaviRequestDTO dto);
+
+    void removeTedavi(Long doktorId, Long randevuId, Long tedaviId);
 }
