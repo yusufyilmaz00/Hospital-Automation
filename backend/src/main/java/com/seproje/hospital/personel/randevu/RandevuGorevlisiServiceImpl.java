@@ -63,6 +63,12 @@ public class RandevuGorevlisiServiceImpl implements RandevuGorevlisiService {
     @Override
     @Transactional
     public void randevuIslemiYap(Long hastaId, Long doktorId, LocalDateTime randevuZamani) {
+        randevuIslemiYap(hastaId, doktorId, randevuZamani, 30);
+    }
+
+    @Override
+    @Transactional
+    public void randevuIslemiYap(Long hastaId, Long doktorId, LocalDateTime randevuZamani, Integer sureDakika) {
 
         Optional<Hasta> hastaOptional = hastaService.findById(hastaId);
 
@@ -72,13 +78,13 @@ public class RandevuGorevlisiServiceImpl implements RandevuGorevlisiService {
 
         Hasta hasta = hastaOptional.get();
 
-        Doktor doktor = doctorService.getDoctorById(doktorId);
+        doctorService.getDoctorById(doktorId);
 
         if (!doctorService.checkAvailability(doktorId, randevuZamani)) {
             throw new IllegalArgumentException("Doctor not available at: " + randevuZamani);
         }
 
-        doctorService.addReservation(doktorId, randevuZamani, hasta);
+        doctorService.addReservation(doktorId, randevuZamani, hasta, sureDakika);
     }
 
     @Override

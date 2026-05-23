@@ -15,5 +15,6 @@ public class DoktorRandevuDTO {
     private Long hastaId;
     private String hastaIsim;
     private String hastaSoyisim;
+    private Integer sureDakika;
     private Double ucret;
 }

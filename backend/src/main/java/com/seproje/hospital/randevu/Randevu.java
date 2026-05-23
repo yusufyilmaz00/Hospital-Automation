@@ -3,10 +3,16 @@ package com.seproje.hospital.randevu;
 import com.seproje.hospital.hasta.Hasta;
 import com.seproje.hospital.personel.doktor.Doktor;
 import jakarta.persistence.*;
+import lombok.*;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 @Entity
 @Table(name = "randevu")
 public class Randevu {
@@ -29,35 +35,19 @@ public class Randevu {
     @Column(name = "ucret")
     private Double ücret;
 
+    @Column(name = "sure_dakika")
+    @Builder.Default
+    private Integer sureDakika = 30;
+
+    @Column(name = "sigorta_indirim_orani")
+    @Builder.Default
+    private Double sigortaIndirimOrani = 0.0;
+
+    @Column(name = "odendi", nullable = false)
+    @Builder.Default
+    private Boolean odendi = false;
+
     @OneToMany(mappedBy = "randevu", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<Tedavi> tedaviler = new ArrayList<>();
-
-    protected Randevu() {}
-
-    public Randevu(LocalDateTime randevuZamani, Hasta hasta, Doktor doktor, Double ücret) {
-        this.randevuZamani = randevuZamani;
-        this.hasta = hasta;
-        this.doktor = doktor;
-        this.ücret = ücret;
-    }
-
-    public Long getId() { return id; }
-
-    public LocalDateTime getRandevuZamani() { return randevuZamani; }
-
-    public void setRandevuZamani(LocalDateTime randevuZamani) { this.randevuZamani = randevuZamani; }
-
-    public Hasta getHasta() { return hasta; }
-
-    public void setHasta(Hasta hasta) { this.hasta = hasta; }
-
-    public Doktor getDoktor() { return doktor; }
-
-    public void setDoktor(Doktor doktor) { this.doktor = doktor; }
-
-    public Double getÜcret() { return ücret; }
-
-    public void setÜcret(Double ücret) { this.ücret = ücret; }
-
-    public List<Tedavi> getTedaviler() { return tedaviler; }
 }

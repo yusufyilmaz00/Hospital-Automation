@@ -32,6 +32,8 @@ public interface DoctorService {
 
     void addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta);
 
+    void addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta, Integer sureDakika);
+
     void removeReservation(Long doctorId, Long randevuId);
 
     boolean checkAvailability(Long doctorId, LocalDateTime desiredTime);
@@ -43,6 +45,8 @@ public interface DoctorService {
     List<DoktorRandevuDTO> getMyRandevular(Long doktorId);
 
     HastaResponseDTO getHastaByRandevuId(Long doktorId, Long randevuId);
+
+    DoktorRandevuDTO updateRandevuSuresi(Long doktorId, Long randevuId, Integer sureDakika);
 
     HastaTedaviDTO addTedavi(Long doktorId, Long randevuId, TedaviRequestDTO dto);
 

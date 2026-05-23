@@ -10,6 +10,7 @@ import com.seproje.hospital.randevu.dto.RaporRequestDTO;
 import com.seproje.hospital.randevu.dto.RaporResponseDTO;
 import com.seproje.hospital.randevu.dto.ReceteDTO;
 import com.seproje.hospital.randevu.dto.ReceteRequestDTO;
+import com.seproje.hospital.randevu.dto.RandevuSureGuncelleRequestDTO;
 import com.seproje.hospital.randevu.dto.TedaviRequestDTO;
 import com.seproje.hospital.security.SecurityContextUtil;
 import jakarta.validation.Valid;
@@ -56,6 +57,17 @@ public class DoktorController {
         return SecurityContextUtil.currentUser(Doktor.class)
                 .map(doktorId -> ResponseEntity.ok(
                         doctorService.getHastaByRandevuId(doktorId, randevuId)
+                ))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @PutMapping("/randevu/{randevuId}/sure")
+    public ResponseEntity<DoktorRandevuDTO> randevuSuresiGuncelle(
+            @PathVariable Long randevuId,
+            @Valid @RequestBody RandevuSureGuncelleRequestDTO dto) {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> ResponseEntity.ok(
+                        doctorService.updateRandevuSuresi(doktorId, randevuId, dto.getSureDakika())
                 ))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }

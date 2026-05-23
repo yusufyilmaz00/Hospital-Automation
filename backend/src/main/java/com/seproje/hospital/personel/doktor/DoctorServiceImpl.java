@@ -101,6 +101,12 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     @Transactional
     public void addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta) {
+        addReservation(doctorId, randevuZamani, hasta, 30);
+    }
+
+    @Override
+    @Transactional
+    public void addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta, Integer sureDakika) {
 
         Doktor doktor = getDoctorById(doctorId);
 
@@ -108,12 +114,12 @@ public class DoctorServiceImpl implements DoctorService {
             throw new IllegalArgumentException("The doctor is not available at the desired time.");
         }
 
-        Randevu newRandevu = new Randevu(
-                randevuZamani,
-                hasta,
-                doktor,
-                calculateSalary(doctorId)
-        );
+        Randevu newRandevu = Randevu.builder()
+                .randevuZamani(randevuZamani)
+                .doktor(doktor)
+                .hasta(hasta)
+                .sureDakika(sureDakika)
+                .build();
 
         doktor.getActiveReservations().add(newRandevu);
 
@@ -208,11 +214,30 @@ public class DoctorServiceImpl implements DoctorService {
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Randevu bulunamadı veya bu randevu size ait değil: " + randevuId));
 
-        Tedavi tedavi = new Tedavi(dto.getTedaviTipi(), dto.getAciklama(), randevu);
+        Tedavi tedavi = Tedavi.builder()
+                .tedaviTipi(dto.getTedaviTipi())
+                .açıklama(dto.getAciklama())
+                .randevu(randevu)
+                .build();
         randevu.getTedaviler().add(tedavi);
         randevuRepository.save(randevu);
 
         return hastaTedaviMapper.toDTO(tedavi);
+    }
+
+    @Override
+    @Transactional
+    public DoktorRandevuDTO updateRandevuSuresi(Long doktorId, Long randevuId, Integer sureDakika) {
+        Randevu randevu = randevuRepository.findByIdAndDoktorId(randevuId, doktorId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Randevu bulunamadı veya bu randevu size ait değil: " + randevuId));
+
+        if (Boolean.TRUE.equals(randevu.getOdendi())) {
+            throw new IllegalArgumentException("Ödemesi alınmış randevunun süresi güncellenemez.");
+        }
+
+        randevu.setSureDakika(sureDakika);
+        return doktorRandevuMapper.toDTO(randevuRepository.save(randevu));
     }
 
     @Override

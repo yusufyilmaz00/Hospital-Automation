@@ -23,6 +23,8 @@ public interface RandevuGorevlisiService {
 
     void randevuIslemiYap(Long hastaId, Long doktorId, LocalDateTime randevuZamani);
 
+    void randevuIslemiYap(Long hastaId, Long doktorId, LocalDateTime randevuZamani, Integer sureDakika);
+
     void randevuIptalEt(Long doktorId, Long randevuId);
 
     boolean checkDoctorAvailability(Long doktorId, LocalDateTime desiredTime);
