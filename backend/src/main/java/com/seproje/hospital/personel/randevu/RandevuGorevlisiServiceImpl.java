@@ -1,7 +1,6 @@
 package com.seproje.hospital.personel.randevu;
 
-import com.seproje.hospital.common.IletisimBilgisi;
-import com.seproje.hospital.common.IletisimBilgisiRepository;
+import com.seproje.hospital.common.mapper.IletisimBilgisiMapper;
 import com.seproje.hospital.personel.doktor.DoctorService;
 import com.seproje.hospital.personel.doktor.Doktor;
 import com.seproje.hospital.personel.randevu.dto.RandevuGorevlisiCreateDTO;
@@ -25,7 +24,7 @@ public class RandevuGorevlisiServiceImpl implements RandevuGorevlisiService {
     private final RandevuGorevlisiRepository repository;
     private final HastaService hastaService;
     private final DoctorService doctorService;
-    private final IletisimBilgisiRepository iletisimRepository;
+    private final IletisimBilgisiMapper iletisimMapper;
     private final PasswordEncoder passwordEncoder;
 
     // ─── CRUD ─────────────────────────────
@@ -33,22 +32,10 @@ public class RandevuGorevlisiServiceImpl implements RandevuGorevlisiService {
     @Override
     @Transactional
     public RandevuGorevlisi create(RandevuGorevlisiCreateDTO dto) {
-
-        IletisimBilgisi contact = new IletisimBilgisi();
-        contact.setIsim(dto.getContactInformation().getIsim());
-        contact.setSoyisim(dto.getContactInformation().getSoyisim());
-        contact.setTckno(dto.getContactInformation().getTckno());
-        contact.setTelefon(dto.getContactInformation().getTelefon());
-        contact.setAdres(dto.getContactInformation().getAdres());
-        contact.setDoğumTarihi(dto.getContactInformation().getDoğumTarihi());
-
-        contact = iletisimRepository.save(contact);
-
         RandevuGorevlisi entity = new RandevuGorevlisi();
         entity.setEmail(dto.getEmail());
         entity.setPassword(passwordEncoder.encode(dto.getPassword()));
-        entity.setContactInformation(contact);
-
+        entity.setContactInformation(iletisimMapper.toEntity(dto.getContactInformation()));
         return repository.save(entity);
     }
 

@@ -4,9 +4,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.seproje.hospital.hasta.Hasta;
+import com.seproje.hospital.personel.doktor.dto.DoktorCreateDTO;
 import com.seproje.hospital.randevu.Randevu;
 
 public interface DoctorService {
+
+    Doktor createDoktor(DoktorCreateDTO dto);
 
     List<Doktor> getAllDoctors();
 

@@ -23,7 +23,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, String>> handleDataIntegrity(DataIntegrityViolationException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(Map.of("message", "Bu kayıt zaten mevcut."));
+                .body(Map.of("message", ex.getMostSpecificCause().getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
