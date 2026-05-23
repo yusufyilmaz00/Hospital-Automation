@@ -8,7 +8,9 @@ import com.seproje.hospital.hasta.Hasta;
 import com.seproje.hospital.hasta.HastaRepository;
 import com.seproje.hospital.hasta.dto.HastaResponseDTO;
 import com.seproje.hospital.personel.doktor.Doktor;
+import com.seproje.hospital.personel.doktor.DoctorService;
 import com.seproje.hospital.personel.doktor.DoctorRepository;
+import com.seproje.hospital.personel.randevu.dto.AlternatifTarihDTO;
 import com.seproje.hospital.Hastane;
 import com.seproje.hospital.randevu.dto.RandevuCreateRequestDTO;
 import com.seproje.hospital.session.SessionConstants;
@@ -24,8 +26,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -52,6 +56,9 @@ class RandevuGorevlisiControllerIT {
 
     @Autowired
     private DoctorRepository doktorRepository;
+
+    @Autowired
+    private DoctorService doctorService;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -294,5 +301,58 @@ class RandevuGorevlisiControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(gecerliRandevuDTO(gecmisZaman))))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rg_alternatifTarihler_haftadakiMusaitDoktorlariVeTarihleriDoner() throws Exception {
+        Cookie rgCookie = loginYap(RG_EMAIL, RG_SIFRE);
+        LocalDate haftaBaslangic = LocalDate.now().plusWeeks(2);
+        LocalDateTime doluSlot = haftaBaslangic.atTime(9, 0);
+
+        mockMvc.perform(post("/api/randevu-gorevlisi/randevu")
+                        .cookie(rgCookie)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(gecerliRandevuDTO(doluSlot))))
+                .andExpect(status().isCreated());
+
+        var result = mockMvc.perform(get("/api/randevu-gorevlisi/alternatif-tarihler")
+                        .queryParam("haftaBaslangic", haftaBaslangic.toString())
+                        .cookie(rgCookie))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        AlternatifTarihDTO[] alternatifler = objectMapper.readValue(
+                result.getResponse().getContentAsString(),
+                AlternatifTarihDTO[].class
+        );
+
+        assertThat(alternatifler).hasSize(1);
+        assertThat(alternatifler[0].getDoktor().getId()).isEqualTo(doktor.getId());
+        assertThat(alternatifler[0].getTarihler()).doesNotContain(doluSlot);
+        assertThat(alternatifler[0].getTarihler()).contains(haftaBaslangic.atStartOfDay());
+    }
+
+    @Test
+    void kimlikSiz_alternatifTarihler_403Doner() throws Exception {
+        mockMvc.perform(get("/api/randevu-gorevlisi/alternatif-tarihler")
+                        .queryParam("haftaBaslangic", LocalDate.now().plusWeeks(1).toString()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void doktorServisi_isAvailable_belirlenenAraliktaMusaitSlotlariDoner() {
+        LocalDateTime start = LocalDate.now().plusWeeks(3).atTime(10, 0);
+        LocalDateTime doluSlot = start.plusMinutes(30);
+
+        doctorService.addReservation(doktor.getId(), doluSlot, hasta);
+
+        List<LocalDateTime> musaitSlotlar = doctorService.isAvailable(
+                doktor.getId(),
+                start,
+                start.plusHours(1),
+                Duration.ofMinutes(30)
+        );
+
+        assertThat(musaitSlotlar).containsExactly(start);
     }
 }

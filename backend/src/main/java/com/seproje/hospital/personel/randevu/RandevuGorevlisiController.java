@@ -3,6 +3,8 @@ package com.seproje.hospital.personel.randevu;
 import com.seproje.hospital.personel.doktor.DoctorService;
 import com.seproje.hospital.personel.doktor.DoktorMapper;
 import com.seproje.hospital.personel.doktor.dto.DoktorResponseDTO;
+import com.seproje.hospital.personel.randevu.dto.AlternatifTarihDTO;
+import com.seproje.hospital.personel.randevu.dto.AlternatifTarihRequestDTO;
 import com.seproje.hospital.personel.randevu.dto.RandevuGorevlisiCreateDTO;
 import com.seproje.hospital.randevu.RandevuRepository;
 import com.seproje.hospital.randevu.dto.RandevuCreateRequestDTO;
@@ -66,6 +68,13 @@ public class RandevuGorevlisiController {
                     randevuGorevlisiService.randevuIptalEt(doktorId, randevuId);
                     return ResponseEntity.ok().<Void>build();
                 })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.FORBIDDEN).build());
+    }
+
+    @GetMapping("/alternatif-tarihler")
+    public ResponseEntity<List<AlternatifTarihDTO>> alternatifTarihler(@Valid @ModelAttribute AlternatifTarihRequestDTO dto) {
+        return SecurityContextUtil.currentUser(RandevuGorevlisi.class)
+                .map(id -> ResponseEntity.ok(randevuGorevlisiService.alternatifTarihleriListele(dto.getHaftaBaslangic())))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.FORBIDDEN).build());
     }
 }

@@ -1,6 +1,8 @@
 package com.seproje.hospital.personel.doktor;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.seproje.hospital.common.mapper.IletisimBilgisiMapper;
@@ -87,8 +89,9 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Randevu> getActiveReservations(Long doctorId) {
-        return getDoctorById(doctorId).getActiveReservations();
+        return new ArrayList<>(getDoctorById(doctorId).getActiveReservations());
     }
 
     // ─────────────────────────────────────────────
@@ -96,6 +99,7 @@ public class DoctorServiceImpl implements DoctorService {
     // ─────────────────────────────────────────────
 
     @Override
+    @Transactional
     public void addReservation(Long doctorId, LocalDateTime randevuZamani, Hasta hasta) {
 
         Doktor doktor = getDoctorById(doctorId);
@@ -117,6 +121,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional
     public void removeReservation(Long doctorId, Long randevuId) {
 
         Doktor doktor = getDoctorById(doctorId);
@@ -128,6 +133,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean checkAvailability(Long doctorId, LocalDateTime desiredTime) {
 
         Doktor doktor = getDoctorById(doctorId);
@@ -148,6 +154,28 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<LocalDateTime> isAvailable(Long doctorId, LocalDateTime start, LocalDateTime end, Duration interval) {
+        if (start == null || end == null || interval == null || interval.isZero() || interval.isNegative()) {
+            throw new IllegalArgumentException("Start, end and interval must be valid.");
+        }
+        if (!start.isBefore(end)) {
+            throw new IllegalArgumentException("Start must be before end.");
+        }
+
+        List<LocalDateTime> availableTimes = new ArrayList<>();
+        LocalDateTime current = start;
+        while (current.isBefore(end)) {
+            if (checkAvailability(doctorId, current)) {
+                availableTimes.add(current);
+            }
+            current = current.plus(interval);
+        }
+        return availableTimes;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Double calculateSalary(Long doctorId) {
         Doktor doktor = getDoctorById(doctorId);
         if (doktor.getUnvan() == null) return 0.0;

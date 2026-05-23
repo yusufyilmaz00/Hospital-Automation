@@ -1,6 +1,7 @@
 package com.seproje.hospital.personel.doktor;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.List;
 
 import com.seproje.hospital.hasta.Hasta;
@@ -34,6 +35,8 @@ public interface DoctorService {
     void removeReservation(Long doctorId, Long randevuId);
 
     boolean checkAvailability(Long doctorId, LocalDateTime desiredTime);
+
+    List<LocalDateTime> isAvailable(Long doctorId, LocalDateTime start, LocalDateTime end, Duration interval);
 
     Double calculateSalary(Long doctorId);
 
