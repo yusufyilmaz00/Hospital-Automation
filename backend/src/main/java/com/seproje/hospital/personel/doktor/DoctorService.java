@@ -4,7 +4,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.seproje.hospital.hasta.Hasta;
+import com.seproje.hospital.hasta.dto.HastaResponseDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorCreateDTO;
+import com.seproje.hospital.personel.doktor.dto.DoktorRandevuDTO;
 import com.seproje.hospital.randevu.Randevu;
 
 public interface DoctorService {
@@ -28,4 +30,8 @@ public interface DoctorService {
     boolean checkAvailability(Long doctorId, LocalDateTime desiredTime);
 
     Double calculateSalary(Long doctorId);
+
+    List<DoktorRandevuDTO> getMyRandevular(Long doktorId);
+
+    HastaResponseDTO getHastaByRandevuId(Long doktorId, Long randevuId);
 }

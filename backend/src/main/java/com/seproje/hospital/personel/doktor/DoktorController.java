@@ -1,7 +1,10 @@
 package com.seproje.hospital.personel.doktor;
 
+import com.seproje.hospital.hasta.dto.HastaResponseDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorCreateDTO;
+import com.seproje.hospital.personel.doktor.dto.DoktorRandevuDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorResponseDTO;
+import com.seproje.hospital.security.SecurityContextUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,5 +34,21 @@ public class DoktorController {
                 .map(doktorMapper::toDTO)
                 .toList();
         return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/randevular")
+    public ResponseEntity<List<DoktorRandevuDTO>> randevulariListele() {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> ResponseEntity.ok(doctorService.getMyRandevular(doktorId)))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @GetMapping("/randevu/{randevuId}/hasta")
+    public ResponseEntity<HastaResponseDTO> hastayiGor(@PathVariable Long randevuId) {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> ResponseEntity.ok(
+                        doctorService.getHastaByRandevuId(doktorId, randevuId)
+                ))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 }

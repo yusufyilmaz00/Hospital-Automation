@@ -4,7 +4,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.seproje.hospital.common.mapper.IletisimBilgisiMapper;
+import com.seproje.hospital.hasta.dto.HastaResponseDTO;
+import com.seproje.hospital.hasta.mapper.HastaMapper;
 import com.seproje.hospital.personel.doktor.dto.DoktorCreateDTO;
+import com.seproje.hospital.personel.doktor.dto.DoktorRandevuDTO;
+import com.seproje.hospital.randevu.RandevuRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +26,9 @@ public class DoctorServiceImpl implements DoctorService {
     private final DoctorRepository doktorRepository;
     private final IletisimBilgisiMapper iletisimMapper;
     private final PasswordEncoder passwordEncoder;
+    private final RandevuRepository randevuRepository;
+    private final DoktorRandevuMapper doktorRandevuMapper;
+    private final HastaMapper hastaMapper;
 
     @Override
     @Transactional
@@ -123,5 +131,22 @@ public class DoctorServiceImpl implements DoctorService {
         double baseSalary = doktor.getUnvan().getHourlyRate() * 160;
         double bonus = doktor.getActiveReservations().size() * 20;
         return baseSalary + bonus;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DoktorRandevuDTO> getMyRandevular(Long doktorId) {
+        return getActiveReservations(doktorId).stream()
+                .map(doktorRandevuMapper::toDTO)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public HastaResponseDTO getHastaByRandevuId(Long doktorId, Long randevuId) {
+        Randevu randevu = randevuRepository.findByIdAndDoktorId(randevuId, doktorId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Randevu bulunamadı veya bu randevu size ait değil: " + randevuId));
+        return hastaMapper.toDTO(randevu.getHasta());
     }
 }

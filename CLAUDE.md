@@ -82,12 +82,47 @@ mvnw spring-boot:run
 | POST | `/randevu` | RG | Randevu oluştur |
 | DELETE | `/randevu/{id}` | RG | Randevu iptal et |
 
-## Tamamlanan Use Case'ler
+## Use Case Listesi (s1.violet)
 
-- [x] **Hasta Sisteme Kayıt** — KG, hasta kaydeder; hasta login olup kendi bilgilerini görür
-- [x] **Randevu Oluşturma** — RG, doktor seçip randevu oluşturur; hasta randevusunu görür
+### Ana Use Case'ler
+- [x] **Hasta Sisteme Kayıt Edilir** — KG, hasta kaydeder; hasta login olup kendi bilgilerini görür
+- [x] **Rezervasyon Alınması** — RG, doktor seçip randevu oluşturur; hasta randevusunu görür
+  - [ ] «extend» **Alternatif Tarih Önerilmesi** — Uygun doktor yoksa RG alternatif tarih önerir
+- [ ] **Muayene** — Doktor, randevuya gelen hastanın bilgilerini görür ve muayene yapar
+  - [ ] «include» **Hasta Bilgilerinin Görüntülenmesi** — Doktor hastanın tüm kaydını görür
+  - [ ] «extend» **Hasta Kaydına Tedavi Ekleme** — Doktor tedaviyi hasta kaydına ekler
+  - [ ] «extend» **Rapor/Reçete Verilmesi** — Doktor rapor veya reçete yazar
+  - [ ] «extend» **Hasta Bilgilerinin Yönetimi** — Doktor hasta bilgilerini günceller
+- [ ] **Ödeme İşleminin Yapılması** — Veznedar ücret hesaplar, ödeme alır
+  - [ ] «include» **Sigorta Durumunun Sorgulanması** — Sosyal sigorta sunucusuna TCKN gönderilir
+  - [ ] «extend» **İndirim Uygulanır** — Sigorta durumuna göre indirim uygulanır
+
+### Aktörler
+| Aktör | Rolleri |
+|-------|---------|
+| Kayıt Görevlisi | Hasta kayıt, hasta listesi |
+| Randevü Görevlisi | Rezervasyon oluştur/iptal, doktor listesi |
+| Doktor | Muayene, tedavi, reçete, hasta bilgisi görüntüle/güncelle |
+| Hasta | Kendi bilgilerini görüntüle/güncelle, ödeme |
+| Veznedar | Ödeme al, sigorta sorgula |
+
+## Teknik Notlar — Manuel Test
+
+### DTO Alan Adı Tutarsızlığı
+`KayitGorevlisiRequestDTO` → alan adı `iletisimBilgisi`  
+`PersonelCreateDTO` (RG, Veznedar) → alan adı `contactInformation`  
+Swagger/Postman'da hangi endpoint'e hangi alan adını gönderdiğine dikkat et.
+
+### TCKN Doğrulama Kuralı
+`IletisimBilgisiDTO` üzerinde `@ValidTckn` aktif:
+- 11 hane, rakam, 0 ile başlayamaz
+- **Son hane = (ilk 10 hanenin toplamı) % 10**
+- Geçerli örnek TCKNler: `10000000001`, `20000000002`, `30000000003`, `40000000004`
+
+### Test Script Encoding
+`backend/test_endpoints.ps1` UTF-8 BOM **ile** kaydedilmeli. BOM'suz kaydedilirse PowerShell 5.1 Türkçe karakterleri Windows-1252 olarak okur ve HTTP body bozulur → 500.
 
 ## Aktif Branch
 
-`feature/randevu-olusturma` — Randevu oluşturma use case implementasyonu devam ediyor.
+`feature/muayene` — Muayene use case implementasyonu.
 
