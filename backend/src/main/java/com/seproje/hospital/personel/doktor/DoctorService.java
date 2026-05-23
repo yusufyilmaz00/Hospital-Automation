@@ -9,6 +9,10 @@ import com.seproje.hospital.hasta.dto.HastaTedaviDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorCreateDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorRandevuDTO;
 import com.seproje.hospital.randevu.Randevu;
+import com.seproje.hospital.randevu.dto.RaporRequestDTO;
+import com.seproje.hospital.randevu.dto.RaporResponseDTO;
+import com.seproje.hospital.randevu.dto.ReceteRequestDTO;
+import com.seproje.hospital.randevu.dto.ReceteDTO;
 import com.seproje.hospital.randevu.dto.TedaviRequestDTO;
 
 public interface DoctorService {
@@ -40,4 +44,12 @@ public interface DoctorService {
     HastaTedaviDTO addTedavi(Long doktorId, Long randevuId, TedaviRequestDTO dto);
 
     void removeTedavi(Long doktorId, Long randevuId, Long tedaviId);
+
+    ReceteDTO addRecete(Long doktorId, Long randevuId, Long tedaviId, ReceteRequestDTO dto);
+
+    void removeRecete(Long doktorId, Long randevuId, Long tedaviId, Long receteId);
+
+    RaporResponseDTO addRapor(Long doktorId, Long randevuId, RaporRequestDTO dto);
+
+    void removeRapor(Long doktorId, Long randevuId, Long raporId);
 }

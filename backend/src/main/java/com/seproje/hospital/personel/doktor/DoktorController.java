@@ -5,6 +5,10 @@ import com.seproje.hospital.hasta.dto.HastaTedaviDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorCreateDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorRandevuDTO;
 import com.seproje.hospital.personel.doktor.dto.DoktorResponseDTO;
+import com.seproje.hospital.randevu.dto.RaporRequestDTO;
+import com.seproje.hospital.randevu.dto.RaporResponseDTO;
+import com.seproje.hospital.randevu.dto.ReceteDTO;
+import com.seproje.hospital.randevu.dto.ReceteRequestDTO;
 import com.seproje.hospital.randevu.dto.TedaviRequestDTO;
 import com.seproje.hospital.security.SecurityContextUtil;
 import jakarta.validation.Valid;
@@ -71,6 +75,52 @@ public class DoktorController {
         return SecurityContextUtil.currentUser(Doktor.class)
                 .map(doktorId -> {
                     doctorService.removeTedavi(doktorId, randevuId, tedaviId);
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @PostMapping("/randevu/{randevuId}/tedavi/{tedaviId}/recete")
+    public ResponseEntity<ReceteDTO> receteEkle(
+            @PathVariable Long randevuId,
+            @PathVariable Long tedaviId,
+            @Valid @RequestBody ReceteRequestDTO dto) {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> ResponseEntity.status(HttpStatus.CREATED)
+                        .body(doctorService.addRecete(doktorId, randevuId, tedaviId, dto)))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @DeleteMapping("/randevu/{randevuId}/tedavi/{tedaviId}/recete/{receteId}")
+    public ResponseEntity<Void> receteSil(
+            @PathVariable Long randevuId,
+            @PathVariable Long tedaviId,
+            @PathVariable Long receteId) {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> {
+                    doctorService.removeRecete(doktorId, randevuId, tedaviId, receteId);
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @PostMapping("/randevu/{randevuId}/rapor")
+    public ResponseEntity<RaporResponseDTO> raporEkle(
+            @PathVariable Long randevuId,
+            @Valid @RequestBody RaporRequestDTO dto) {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> ResponseEntity.status(HttpStatus.CREATED)
+                        .body(doctorService.addRapor(doktorId, randevuId, dto)))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @DeleteMapping("/randevu/{randevuId}/rapor/{raporId}")
+    public ResponseEntity<Void> raporSil(
+            @PathVariable Long randevuId,
+            @PathVariable Long raporId) {
+        return SecurityContextUtil.currentUser(Doktor.class)
+                .map(doktorId -> {
+                    doctorService.removeRapor(doktorId, randevuId, raporId);
                     return ResponseEntity.noContent().<Void>build();
                 })
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
