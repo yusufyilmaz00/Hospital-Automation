@@ -721,22 +721,22 @@ function renderGiris()
 }
 
 function updateNavigationVisibility() {
-  const store = getStore();
-  const session = store.session;
+  const session = getSession();
   let role = null;
   if (session) {
     role = session.kind === 'patient' ? 'HASTA' : session.role;
   }
 
   const checkAccess = (href) => {
-    if (href === 'index.html') return true;
-    if (href === 'giris.html') return !session;
+    const filename = href.split('/').pop();
+    if (filename === 'index.html') return true;
+    if (filename === 'giris.html') return !session;
     if (session) {
-      if (role === 'HASTA') return ['profil.html', 'muayene.html', 'rezervasyon.html', 'odeme.html'].includes(href);
-      if (role === 'DR') return ['profil.html', 'doktor-panel.html', 'hasta-listesi.html', 'muayene.html'].includes(href);
-      if (role === 'KG') return ['profil.html', 'kayit.html', 'hasta-listesi.html', 'personel-kayit.html'].includes(href);
-      if (role === 'RG') return ['profil.html', 'rezervasyon.html', 'hasta-listesi.html', 'doktor-panel.html'].includes(href);
-      if (role === 'VZ') return ['profil.html', 'odeme.html', 'hasta-listesi.html'].includes(href);
+      if (role === 'HASTA') return ['profil.html', 'muayene.html', 'rezervasyon.html', 'odeme.html'].includes(filename);
+      if (role === 'DR') return ['profil.html', 'doktor-panel.html', 'hasta-listesi.html', 'muayene.html'].includes(filename);
+      if (role === 'KG') return ['profil.html', 'kayit.html', 'hasta-listesi.html', 'personel-kayit.html'].includes(filename);
+      if (role === 'RG') return ['profil.html', 'rezervasyon.html', 'hasta-listesi.html', 'doktor-panel.html'].includes(filename);
+      if (role === 'VZ') return ['profil.html', 'odeme.html', 'hasta-listesi.html'].includes(filename);
     }
     return false;
   };
@@ -1311,7 +1311,7 @@ document.addEventListener("submit", function (e)
     const labels = { KG: "Kayıt Görevlisi", RG: "Randevu Görevlisi", DR: "Doktor", VZ: "Veznedar" };
     setSession({ kind: "staff", role: role, roleLabel: labels[role] });
     toast("Giriş başarılı.");
-    window.location.href = "index.html";
+    window.location.href = (window.location.pathname.endsWith("index.html") || window.location.pathname.endsWith("/")) ? "index.html" : "../index.html";
     return;
   }
   if (kind === "login-patient")
@@ -1329,7 +1329,7 @@ document.addEventListener("submit", function (e)
     }
     setSession({ kind: "patient", patientId: p.id, name: p.name, tckn: p.tckn });
     toast("Hoş geldiniz, " + p.name);
-    window.location.href = "kayit.html";
+    window.location.href = (window.location.pathname.endsWith("index.html") || window.location.pathname.endsWith("/")) ? "pages/kayit.html" : "kayit.html";
     return;
   }
   if (kind === "register")
@@ -1508,6 +1508,9 @@ document.addEventListener("submit", function (e)
 
 document.addEventListener("DOMContentLoaded", function ()
 {
+  if (typeof injectSharedElements === 'function') {
+    injectSharedElements();
+  }
   const shell = document.querySelector(".shell");
   if (shell && !document.getElementById("session-bar"))
   {
