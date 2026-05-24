@@ -1,0 +1,97 @@
+{
+  "site": {
+    "title": "Hastane Yönetim Sistemi",
+    "subtitle": "Use case listesi — işlemler tamamlandıkça [x] güncellenir"
+  },
+  "useCases": [
+    {
+      "id": "kayit",
+      "slug": "kayit",
+      "title": "Hasta Sisteme Kayıt Edilir",
+      "done": true,
+      "role": "KG",
+      "roleLabel": "Kayıt Görevlisi",
+      "description": "KG hasta kaydeder; hasta login olup kendi bilgilerini görür.",
+      "page": "kayit.html",
+      "subCases": []
+    },
+    {
+      "id": "rezervasyon",
+      "slug": "rezervasyon",
+      "title": "Rezervasyon Alınması",
+      "done": true,
+      "role": "RG",
+      "roleLabel": "Randevu Görevlisi",
+      "description": "RG doktor seçip randevu oluşturur; hasta randevusunu görür.",
+      "page": "rezervasyon.html",
+      "subCases": [
+        {
+          "relation": "extend",
+          "title": "Alternatif Tarih Önerilmesi",
+          "done": false,
+          "description": "Uygun doktor yoksa RG alternatif tarih önerir."
+        }
+      ]
+    },
+    {
+      "id": "muayene",
+      "slug": "muayene",
+      "title": "Muayene",
+      "done": false,
+      "role": "DR",
+      "roleLabel": "Doktor",
+      "description": "Doktor randevuya gelen hastanın bilgilerini görür ve muayene yapar.",
+      "page": "muayene.html",
+      "subCases": [
+        {
+          "relation": "include",
+          "title": "Hasta Bilgilerinin Görüntülenmesi",
+          "done": true,
+          "description": "Doktor hastanın tüm kaydını görür."
+        },
+        {
+          "relation": "extend",
+          "title": "Hasta Kaydına Tedavi Ekleme",
+          "done": false,
+          "description": "Doktor tedaviyi hasta kaydına ekler."
+        },
+        {
+          "relation": "extend",
+          "title": "Rapor / Reçete Verilmesi",
+          "done": false,
+          "description": "Doktor rapor veya reçete yazar."
+        },
+        {
+          "relation": "extend",
+          "title": "Hasta Bilgilerinin Yönetimi",
+          "done": false,
+          "description": "Doktor hasta bilgilerini günceller."
+        }
+      ]
+    },
+    {
+      "id": "odeme",
+      "slug": "odeme",
+      "title": "Ödeme İşleminin Yapılması",
+      "done": false,
+      "role": "VZ",
+      "roleLabel": "Veznedar",
+      "description": "Veznedar ücret hesaplar, ödeme alır.",
+      "page": "odeme.html",
+      "subCases": [
+        {
+          "relation": "include",
+          "title": "Sigorta Durumunun Sorgulanması",
+          "done": false,
+          "description": "Sosyal sigorta sunucusuna TCKN gönderilir."
+        },
+        {
+          "relation": "extend",
+          "title": "İndirim Uygulanır",
+          "done": false,
+          "description": "Sigorta durumuna göre indirim uygulanır."
+        }
+      ]
+    }
+  ]
+}

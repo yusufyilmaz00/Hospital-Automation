@@ -10,32 +10,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hastane Yönetim Sistemi</title>
+  <title>Giriş</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-page="index">
+<body data-page="giris">
   <div class="shell">
+    <a class="back-link" href="index.html">← Ana sayfa</a>
     <header class="site-header">
-      <h1 id="site-title">Hastane Yönetim Sistemi</h1>
-      <p id="site-subtitle">Yükleniyor…</p>
+      <h1 id="page-heading">Giriş</h1>
       <nav class="top-nav">
-        <a href="index.html" class="active">Ana sayfa</a>
-        <a href="giris.html">Giriş</a>
+        <a href="index.html">Ana sayfa</a>
+        <a href="giris.html" class="active">Giriş</a>
         <a href="kayit.html">Kayıt</a>
         <a href="rezervasyon.html">Rezervasyon</a>
         <a href="muayene.html">Muayene</a>
         <a href="odeme.html">Ödeme</a>
       </nav>
     </header>
-    <section>
-      <div id="use-case-checklist" class="panel checklist-panel"></div>
-      <h2 style="margin:1.25rem 0 1rem;font-size:1.15rem">Sayfalar</h2>
-      <div id="use-case-grid" class="card-grid"></div>
-    </section>
+    <div id="session-bar"></div>
+    <div id="page-content"></div>
   </div>
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
-
-</ ---------------------------------------------------------------------------------------------------------------------------- />
