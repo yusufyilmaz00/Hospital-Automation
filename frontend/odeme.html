@@ -16,18 +16,26 @@
 <body data-page="odeme">
   <div class="shell">
     <a class="back-link" href="index.html">← Ana sayfa</a>
-    <header class="site-header">
+    <header class="site-header" style="position: relative;">
       <h1 id="page-heading">Ödeme İşleminin Yapılması</h1>
+      <div style="position: absolute; top: 1rem; right: 1rem; display: flex; align-items: center; gap: 0.5rem; background: var(--surface); padding: 0.25rem 0.5rem; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border);">
+        <label for="test-mode-toggle" style="font-size: 0.85rem; font-weight: 500; cursor: pointer;">Test Mode</label>
+        <input type="checkbox" id="test-mode-toggle" style="cursor: pointer;">
+      </div>
       <nav class="top-nav">
         <a href="index.html">Ana sayfa</a>
         <a href="giris.html">Giriş</a>
-        <a href="kayit.html">Kayıt</a>
+        <a href="profil.html">Profil</a>
+        <a href="doktor-panel.html">Doktor</a>
+        <a href="hasta-listesi.html">Hastalar</a>
+        <a href="kayit.html">Hasta Kayıt</a>
+        <a href="personel-kayit.html">Personel Kayıt</a>
         <a href="rezervasyon.html">Rezervasyon</a>
         <a href="muayene.html">Muayene</a>
         <a href="odeme.html" class="active">Ödeme</a>
       </nav>
     </header>
-    <div id="use-case-detail"></div>
+
     <div id="dummy-data"></div>
   </div>
   <script src="js/data.js"></script>

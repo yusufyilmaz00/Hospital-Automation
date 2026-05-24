@@ -15,22 +15,31 @@
 </head>
 <body data-page="index">
   <div class="shell">
-    <header class="site-header">
+    <header class="site-header" style="position: relative;">
       <h1 id="site-title">Hastane Yönetim Sistemi</h1>
       <p id="site-subtitle">Yükleniyor…</p>
+      <div style="position: absolute; top: 1rem; right: 1rem; display: flex; align-items: center; gap: 0.5rem; background: var(--surface); padding: 0.25rem 0.5rem; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border);">
+        <label for="test-mode-toggle" style="font-size: 0.85rem; font-weight: 500; cursor: pointer;">Test Mode</label>
+        <input type="checkbox" id="test-mode-toggle" style="cursor: pointer;">
+      </div>
       <nav class="top-nav">
         <a href="index.html" class="active">Ana sayfa</a>
         <a href="giris.html">Giriş</a>
-        <a href="kayit.html">Kayıt</a>
+        <a href="profil.html">Profil</a>
+        <a href="doktor-panel.html">Doktor</a>
+        <a href="hasta-listesi.html">Hastalar</a>
+        <a href="kayit.html">Hasta Kayıt</a>
+        <a href="personel-kayit.html">Personel Kayıt</a>
         <a href="rezervasyon.html">Rezervasyon</a>
         <a href="muayene.html">Muayene</a>
         <a href="odeme.html">Ödeme</a>
       </nav>
     </header>
     <section>
-      <div id="use-case-checklist" class="panel checklist-panel"></div>
-      <h2 style="margin:1.25rem 0 1rem;font-size:1.15rem">Sayfalar</h2>
-      <div id="use-case-grid" class="card-grid"></div>
+      <div class="panel" style="text-align: center; padding: 3rem 1rem;">
+        <h2 style="margin-bottom: 1rem; font-size: 1.5rem;">Hastane Yönetim Sistemine Hoş Geldiniz</h2>
+        <p style="color: var(--muted);">Lütfen sol üstteki menüden bir işlem seçin veya sisteme giriş yapın.</p>
+      </div>
     </section>
   </div>
   <script src="js/data.js"></script>

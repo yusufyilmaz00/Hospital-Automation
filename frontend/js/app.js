@@ -5,23 +5,14 @@
 
 const STORE_KEY = "hospital-store-v1";
 const SESSION_KEY = "hospital-session-v1";
-const PROGRESS_KEY = "hospital-progress-v1";
 const MUAYENE_PID_KEY = "hospital-muayene-pid";
+const TEST_MODE_KEY = "hospital-test-mode-v1";
 const STAFF_PIN = "1234";
 
-const DEFAULT_PROGRESS = {
-  kayit: true,
-  rezervasyon: true,
-  rezervasyonAlt: false,
-  muayene: false,
-  muayeneView: true,
-  muayeneTreatment: false,
-  muayeneRx: false,
-  muayeneManage: false,
-  odeme: false,
-  odemeInsurance: false,
-  odemeDiscount: false
-};
+function isTestMode() {
+  return localStorage.getItem(TEST_MODE_KEY) !== "false"; // Default to true if null
+}
+
 
 function loadJson(path)
 {
@@ -90,6 +81,11 @@ function normalizeStore(store)
 
 function getStore()
 {
+  if (!isTestMode()) {
+    console.warn("[API Mode] API Fetch is not fully implemented yet. Returning empty store.");
+    return normalizeStore({ patients: [], doctors: [], payments: [] });
+  }
+
   const raw = localStorage.getItem(STORE_KEY);
   if (raw)
   {
@@ -110,129 +106,15 @@ function saveStore(store)
 function resetStore()
 {
   localStorage.removeItem(STORE_KEY);
-  localStorage.removeItem(PROGRESS_KEY);
-  localStorage.removeItem(MUAYENE_PID_KEY);
+    localStorage.removeItem(MUAYENE_PID_KEY);
   getStore();
 }
 
-function getProgress()
-{
-  const raw = localStorage.getItem(PROGRESS_KEY);
-  if (!raw)
-  {
-    return Object.assign({}, DEFAULT_PROGRESS);
-  }
-  return Object.assign({}, DEFAULT_PROGRESS, JSON.parse(raw));
-}
 
-function setProgress(key, value)
-{
-  const p = getProgress();
-  p[key] = value;
-  localStorage.setItem(PROGRESS_KEY, JSON.stringify(p));
-}
 
-function markProgress(key)
-{
-  setProgress(key, true);
-}
 
-async function loadProjectsMerged()
-{
-  const data = JSON.parse(JSON.stringify(
-    await loadJson("data/projects.json")
-  ));
-  const p = getProgress();
-  data.useCases.forEach(function (uc)
-  {
-    if (uc.slug === "kayit")
-    {
-      uc.done = p.kayit;
-    }
-    if (uc.slug === "rezervasyon")
-    {
-      uc.done = p.rezervasyon;
-      if (uc.subCases[0])
-      {
-        uc.subCases[0].done = p.rezervasyonAlt;
-      }
-    }
-    if (uc.slug === "muayene")
-    {
-      uc.done = p.muayene;
-      if (uc.subCases[0])
-      {
-        uc.subCases[0].done = p.muayeneView;
-      }
-      if (uc.subCases[1])
-      {
-        uc.subCases[1].done = p.muayeneTreatment;
-      }
-      if (uc.subCases[2])
-      {
-        uc.subCases[2].done = p.muayeneRx;
-      }
-      if (uc.subCases[3])
-      {
-        uc.subCases[3].done = p.muayeneManage;
-      }
-    }
-    if (uc.slug === "odeme")
-    {
-      uc.done = p.odeme;
-      if (uc.subCases[0])
-      {
-        uc.subCases[0].done = p.odemeInsurance;
-      }
-      if (uc.subCases[1])
-      {
-        uc.subCases[1].done = p.odemeDiscount;
-      }
-    }
-  });
-  return data;
-}
 
-function checkMark(done)
-{
-  return done ? "[x]" : "[ ]";
-}
 
-function renderChecklist()
-{
-  const el = document.getElementById("use-case-checklist");
-  if (!el)
-  {
-    return;
-  }
-  const p = getProgress();
-  const rows = [
-    { done: p.kayit, text: "Hasta Sisteme Kayıt Edilir – KG, hasta kaydeder; hasta login olup kendi bilgilerini görür" },
-    { done: p.rezervasyon, text: "Rezervasyon Alınması – RG, doktor seçip randevu oluşturur; hasta randevusunu görür" },
-    { done: p.rezervasyonAlt, text: "«extend» Alternatif Tarih Önerilmesi – Uygun doktor yoksa RG alternatif tarih önerir", sub: true },
-    { done: p.muayene, text: "Muayene – Doktor, randevuya gelen hastanın bilgilerini görür ve muayene yapar" },
-    { done: p.muayeneView, text: "«include» Hasta Bilgilerinin Görüntülenmesi – Doktor hastanın tüm kaydını görür", sub: true },
-    { done: p.muayeneTreatment, text: "«extend» Hasta Kaydına Tedavi Ekleme – Doktor tedaviyi hasta kaydına ekler", sub: true },
-    { done: p.muayeneRx, text: "«extend» Rapor/Reçete Verilmesi – Doktor rapor veya reçete yazar", sub: true },
-    { done: p.muayeneManage, text: "«extend» Hasta Bilgilerinin Yönetimi – Doktor hasta bilgilerini günceller", sub: true },
-    { done: p.odeme, text: "Ödeme İşleminin Yapılması – Veznedar ücret hesaplar, ödeme alır" },
-    { done: p.odemeInsurance, text: "«include» Sigorta Durumunun Sorgulanması – Sosyal sigorta sunucusuna TCKN gönderilir", sub: true },
-    { done: p.odemeDiscount, text: "«extend» İndirim Uygulanır – Sigorta durumuna göre indirim uygulanır", sub: true }
-  ];
-  const items = rows.map(function (row)
-  {
-    const cls = (row.sub ? "sub " : "") + (row.done ? "done" : "");
-    return (
-      '<li class="' + cls + '">' +
-      '<span class="chk">' + checkMark(row.done) + "</span> " +
-      esc(row.text) +
-      "</li>"
-    );
-  }).join("");
-  el.innerHTML =
-    "<h2>Ana Use Case'ler</h2>" +
-    '<ul class="uc-checklist">' + items + "</ul>";
-}
 
 function getSession()
 {
@@ -376,46 +258,8 @@ function renderSessionBar()
     "</div>";
 }
 
-function badge(done)
-{
-  const cls = done ? "done" : "pending";
-  const label = done ? "Tamamlandı" : "Bekliyor";
-  return '<span class="badge ' + cls + '">' + label + "</span>";
-}
 
-function relationTag(relation)
-{
-  if (!relation)
-  {
-    return "";
-  }
-  const label = relation === "extend" ? "extend" : "include";
-  return '<span class="relation-tag ' + relation + '">«' + label + "»</span>";
-}
 
-function renderSubCases(subCases)
-{
-  if (!subCases || subCases.length === 0)
-  {
-    return "";
-  }
-  const items = subCases.map(function (sub)
-  {
-    const rel = sub.relation || "";
-    return (
-      '<li class="' + rel + '">' +
-      relationTag(rel) +
-      badge(sub.done) +
-      " <strong>" + esc(sub.title) + "</strong>" +
-      '<p style="margin:0.35rem 0 0;color:var(--muted);font-size:0.9rem">' +
-      esc(sub.description) +
-      "</p></li>"
-    );
-  }).join("");
-  return (
-    '<h3>Alt use case\'ler</h3><ul class="sub-list">' + items + "</ul>"
-  );
-}
 
 function roleHint(needed, session)
 {
@@ -429,68 +273,10 @@ function roleHint(needed, session)
   );
 }
 
-async function renderUseCasePage(slug)
-{
-  const data = await loadProjectsMerged();
-  const uc = data.useCases.find(function (item)
-  {
-    return item.slug === slug;
-  });
-  const root = document.getElementById("use-case-detail");
-  if (!uc || !root)
-  {
-    return;
-  }
-  document.title = uc.title + " — " + data.site.title;
-  const heading = document.getElementById("page-heading");
-  if (heading)
-  {
-    heading.textContent = uc.title;
-  }
-  root.innerHTML =
-    '<div class="panel">' +
-    badge(uc.done) +
-    '<span class="badge role">' + esc(uc.role) + " · " + esc(uc.roleLabel) + "</span>" +
-    '<p style="margin-top:1rem">' + esc(uc.description) + "</p>" +
-    renderSubCases(uc.subCases) +
-    "</div>";
-}
 
 async function renderIndex()
 {
-  const data = await loadProjectsMerged();
-  const grid = document.getElementById("use-case-grid");
-  const title = document.getElementById("site-title");
-  const subtitle = document.getElementById("site-subtitle");
-  if (title)
-  {
-    title.textContent = data.site.title;
-  }
-  if (subtitle)
-  {
-    subtitle.textContent = data.site.subtitle;
-  }
   renderSessionBar();
-  if (!grid)
-  {
-    return;
-  }
-  grid.innerHTML = data.useCases.map(function (uc)
-  {
-    return (
-      '<article class="card">' +
-      "<h2>" + esc(uc.title) + "</h2>" +
-      badge(uc.done) +
-      '<span class="badge role">' + esc(uc.role) + " · " + esc(uc.roleLabel) + "</span>" +
-      "<p>" + esc(uc.description) + "</p>" +
-      '<div class="btn-row">' +
-      '<a class="btn btn-primary btn-sm" href="' + esc(uc.page) + '">Sayfaya git</a>' +
-      '<button type="button" class="btn btn-secondary btn-sm" data-action="demo-login" data-role="' +
-      esc(uc.role) + '">' + esc(uc.role) + " olarak giriş</button>" +
-      "</div>" +
-      "</article>"
-    );
-  }).join("");
 }
 
 function renderPatientsTableRows(patients, session)
@@ -528,7 +314,6 @@ async function renderKayit()
   const session = getSession();
   const store = getStore();
   renderSessionBar();
-  await renderUseCasePage("kayit");
   const el = document.getElementById("dummy-data");
   if (!el)
   {
@@ -607,7 +392,7 @@ function buildAltPanel(store, doctorId, canBook)
   });
   return (
     '<div class="panel" id="alt-dates-panel" style="background:#faf8ff">' +
-    "<h3>«extend» Alternatif Tarih Önerilmesi</h3>" +
+    "<h3>Alternatif Tarih Önerilmesi</h3>" +
     '<p class="hint">' + esc(doctor.name) + " için müsait slot yok. Alternatif tarihler:</p>" +
     '<div class="btn-row">' + btns + "</div></div>"
   );
@@ -618,7 +403,6 @@ async function renderRezervasyon()
   const session = getSession();
   const store = getStore();
   renderSessionBar();
-  await renderUseCasePage("rezervasyon");
   const el = document.getElementById("dummy-data");
   if (!el)
   {
@@ -731,7 +515,7 @@ function renderPatientDossier(p)
   });
   return (
     '<div class="panel" style="background:var(--accent-light)">' +
-    "<h3>«include» Hasta dosyası — " + esc(p.name) + "</h3>" +
+    "<h3>Hasta dosyası — " + esc(p.name) + "</h3>" +
     "<p><strong>TCKN:</strong> " + esc(p.tckn) + " · <strong>Tel:</strong> " + esc(p.phone) +
     " · <strong>Sigorta:</strong> " + esc(p.insurance) + " · <strong>Doğum:</strong> " + esc(p.birthDate) + "</p>" +
     "<h4>Randevular</h4><ul>" + (appts || "<li>—</li>") + "</ul>" +
@@ -747,7 +531,6 @@ async function renderMuayene()
   const session = getSession();
   const store = getStore();
   renderSessionBar();
-  await renderUseCasePage("muayene");
   const el = document.getElementById("dummy-data");
   if (!el)
   {
@@ -786,7 +569,7 @@ async function renderMuayene()
       (canExam ? "" : " disabled") + '></textarea></label>' +
       '<button type="submit" class="btn btn-primary"' +
       (canExam ? "" : " disabled") + ">Not ekle</button></form></div>" +
-      '<div class="panel"><h3>«extend» Tedavi ekle</h3>' +
+      '<div class="panel"><h3>Tedavi ekle</h3>' +
       '<form data-form="treatment" class="form-grid two-col">' +
       '<input type="hidden" name="patientId" value="' + esc(active.id) + '">' +
       '<label class="field"><span>İlaç / tedavi</span><input name="name" required' +
@@ -795,7 +578,7 @@ async function renderMuayene()
       (canExam ? "" : " disabled") + '></label>' +
       '<div class="btn-row"><button type="submit" class="btn btn-secondary"' +
       (canExam ? "" : " disabled") + ">Tedavi ekle</button></div></form></div>" +
-      '<div class="panel"><h3>«extend» Rapor / reçete</h3>' +
+      '<div class="panel"><h3>Rapor / reçete</h3>' +
       '<form data-form="prescription">' +
       '<input type="hidden" name="patientId" value="' + esc(active.id) + '">' +
       '<label class="field"><span>Tür</span><select name="type"' +
@@ -804,7 +587,7 @@ async function renderMuayene()
       (canExam ? "" : " disabled") + '></textarea></label>' +
       '<button type="submit" class="btn btn-secondary"' +
       (canExam ? "" : " disabled") + ">Yaz</button></form></div>" +
-      '<div class="panel"><h3>«extend» Hasta bilgilerini güncelle</h3>' +
+      '<div class="panel"><h3>Hasta bilgilerini güncelle</h3>' +
       '<form data-form="update-patient" class="form-grid two-col">' +
       '<input type="hidden" name="patientId" value="' + esc(active.id) + '">' +
       '<label class="field"><span>Telefon</span><input name="phone" value="' + esc(active.phone) + '"' +
@@ -832,7 +615,6 @@ async function renderOdeme()
   const session = getSession();
   const store = getStore();
   renderSessionBar();
-  await renderUseCasePage("odeme");
   const el = document.getElementById("dummy-data");
   if (!el)
   {
@@ -859,10 +641,10 @@ async function renderOdeme()
       esc(pay.id) + '"' + (canCashier ? "" : " disabled") + ">Ücret hesapla</button>" +
       '<button type="button" class="btn btn-secondary btn-sm" data-action="query-insurance" data-pay="' +
       esc(pay.id) + '" data-tckn="' + esc(tckn) + '"' + (canCashier ? "" : " disabled") +
-      ">«include» Sigorta sorgula (TCKN)</button>" +
+      ">Sigorta sorgula (TCKN)</button>" +
       '<button type="button" class="btn btn-secondary btn-sm" data-action="apply-discount" data-pay="' +
       esc(pay.id) + '"' + (canCashier && queried ? "" : " disabled") +
-      ">«extend» İndirim uygula</button>" +
+      ">İndirim uygula</button>" +
       '<button type="button" class="btn btn-primary btn-sm" data-action="take-payment" data-pay="' +
       esc(pay.id) + '"' + (canPay ? "" : " disabled") + ">Ödemeyi al</button>" +
       "</div>";
@@ -935,19 +717,11 @@ function renderGiris()
     '<form data-form="login-patient" class="form-grid">' +
     '<label class="field"><span>TCKN</span><input name="tckn" required maxlength="11" placeholder="11 hane"></label>' +
     '<div class="btn-row"><button type="submit" class="btn btn-primary">Giriş yap</button></div>' +
-    "</form></div>" +
-    '<div class="panel"><h2>Demo</h2>' +
-    '<div class="btn-row">' +
-    '<button type="button" class="btn btn-ghost btn-sm" data-action="reset-store">Veriyi sıfırla</button>' +
-    "</div></div>";
+    "</form></div>";
 }
 
 function refreshPage()
 {
-  if (document.getElementById("use-case-checklist"))
-  {
-    renderChecklist();
-  }
   const page = document.body.dataset.page;
   if (page === "index")
   {
@@ -973,6 +747,83 @@ function refreshPage()
   {
     renderOdeme().catch(console.error);
   }
+  else if (page === "profil")
+  {
+    renderProfil().catch(console.error);
+  }
+  else if (page === "doktor-panel")
+  {
+    renderDoktorPanel().catch(console.error);
+  }
+  else if (page === "hasta-listesi")
+  {
+    renderHastaListesi().catch(console.error);
+  }
+  else if (page === "personel-kayit")
+  {
+    renderPersonelKayit().catch(console.error);
+  }
+}
+
+async function renderProfil() {
+  const session = getSession();
+  const store = getStore();
+  renderSessionBar();
+  const el = document.getElementById("dummy-data");
+  if (!el) return;
+  if (!session || session.kind !== "patient") {
+    el.innerHTML = '<div class="panel"><p class="empty">Bu sayfayı görüntülemek için Hasta olarak giriş yapmalısınız.</p></div>';
+    return;
+  }
+  const p = findPatient(store, session.patientId);
+  el.innerHTML =
+    '<div class="panel"><h2>Hasta Profili</h2>' +
+    renderPatientDossier(p) + '</div>';
+}
+
+async function renderDoktorPanel() {
+  const session = getSession();
+  const store = getStore();
+  renderSessionBar();
+  const el = document.getElementById("dummy-data");
+  if (!el) return;
+  if (!hasRole(session, ["DR"])) {
+    el.innerHTML = '<div class="panel"><p class="empty">Bu sayfayı görüntülemek için Doktor (DR) olarak giriş yapmalısınız.</p></div>';
+    return;
+  }
+  const waiting = patientsWithConfirmedAppt(store);
+  let queueHtml = "";
+  waiting.forEach(function (p) {
+    queueHtml +=
+      '<div class="btn-row" style="margin-bottom:0.5rem">' +
+      "<span><strong>" + esc(p.name) + "</strong> — onaylı randevu</span>" +
+      '<button type="button" class="btn btn-primary btn-sm" data-action="open-muayene" data-id="' +
+      esc(p.id) + '">Muayeneye al</button>' +
+      "</div>";
+  });
+  if (!queueHtml) queueHtml = '<p class="empty">Onaylı randevulu hasta yok.</p>';
+  el.innerHTML = '<div class="panel"><h2>Doktor Paneli - Bekleyen Hastalar</h2>' + queueHtml + '</div>';
+}
+
+async function renderHastaListesi() {
+  const session = getSession();
+  const store = getStore();
+  renderSessionBar();
+  const el = document.getElementById("dummy-data");
+  if (!el) return;
+  if (!hasRole(session, ["KG"])) {
+    el.innerHTML = '<div class="panel"><p class="empty">Bu sayfayı görüntülemek için Kayıt Görevlisi (KG) olarak giriş yapmalısınız.</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="panel"><h2>Tüm Hastalar</h2><div id="patient-detail"></div>' + renderPatientsTableRows(store.patients, session) + '</div>';
+}
+
+async function renderPersonelKayit() {
+  const session = getSession();
+  renderSessionBar();
+  const el = document.getElementById("dummy-data");
+  if (!el) return;
+  el.innerHTML = '<div class="panel"><h2>Personel Kayıt</h2><p class="hint">API tarafı desteklenene kadar mock data üzerinden çalışmıyor. (Sadece UI stub)</p></div>';
 }
 
 function showPatientDetail(id)
@@ -986,7 +837,6 @@ function showPatientDetail(id)
   }
   if (hasRole(getSession(), ["DR"]))
   {
-    markProgress("muayeneView");
   }
   box.innerHTML =
     renderPatientDossier(p) +
@@ -1039,7 +889,6 @@ function bookSlot(patientId, doctorId, slot, fromAlt)
     {
       return s !== slot;
     });
-    markProgress("rezervasyonAlt");
   }
   else
   {
@@ -1048,7 +897,6 @@ function bookSlot(patientId, doctorId, slot, fromAlt)
       return s !== slot;
     });
   }
-  markProgress("rezervasyon");
   saveStore(store);
   return true;
 }
@@ -1144,13 +992,11 @@ document.addEventListener("click", function (e)
   if (action === "open-muayene")
   {
     localStorage.setItem(MUAYENE_PID_KEY, btn.dataset.id);
-    markProgress("muayeneView");
     refreshPage();
     return;
   }
   if (action === "view-dossier")
   {
-    markProgress("muayeneView");
     const store = getStore();
     const p = findPatient(store, btn.dataset.id);
     if (p)
@@ -1176,7 +1022,6 @@ document.addEventListener("click", function (e)
     const p = findPatient(store, btn.dataset.id);
     if (p && p.records && p.records.length > 0)
     {
-      markProgress("muayene");
       localStorage.removeItem(MUAYENE_PID_KEY);
       toast("Muayene tamamlandı.");
       refreshPage();
@@ -1252,7 +1097,6 @@ document.addEventListener("click", function (e)
       pay.insuranceQuery = patient.insurance === "SGK" ? "SGK aktif" : "Özel sigorta";
       pay.tcknSent = btn.dataset.tckn;
       saveStore(store);
-      markProgress("odemeInsurance");
       toast("TCKN " + btn.dataset.tckn + " sunucuya gönderildi → " + pay.insuranceQuery);
       refreshPage();
     }
@@ -1269,7 +1113,6 @@ document.addEventListener("click", function (e)
     {
       pay.discount = pay.insuranceQuery.indexOf("SGK") >= 0 ? 0.2 : 0.1;
       saveStore(store);
-      markProgress("odemeDiscount");
       toast("İndirim uygulandı: %" + Math.round(pay.discount * 100));
       refreshPage();
     }
@@ -1290,11 +1133,18 @@ document.addEventListener("click", function (e)
     {
       pay.paid = true;
       saveStore(store);
-      markProgress("odeme");
       toast("Ödeme alındı.");
       refreshPage();
     }
     return;
+  }
+});
+
+document.addEventListener("change", function(e) {
+  if (e.target.id === "test-mode-toggle") {
+    localStorage.setItem(TEST_MODE_KEY, e.target.checked);
+    toast("Test Mode " + (e.target.checked ? "ON" : "OFF"));
+    refreshPage();
   }
 });
 
@@ -1336,7 +1186,6 @@ document.addEventListener("submit", function (e)
       return;
     }
     setSession({ kind: "patient", patientId: p.id, name: p.name, tckn: p.tckn });
-    markProgress("kayit");
     toast("Hoş geldiniz, " + p.name);
     window.location.href = "kayit.html";
     return;
@@ -1382,7 +1231,6 @@ document.addEventListener("submit", function (e)
       paid: false
     });
     saveStore(store);
-    markProgress("kayit");
     form.reset();
     toast("Hasta kaydedildi: " + id);
     refreshPage();
@@ -1462,7 +1310,6 @@ document.addEventListener("submit", function (e)
       dose: String(fd.get("dose")).trim()
     });
     saveStore(store);
-    markProgress("muayeneTreatment");
     form.reset();
     toast("Tedavi eklendi.");
     refreshPage();
@@ -1491,7 +1338,6 @@ document.addEventListener("submit", function (e)
       text: String(fd.get("text")).trim()
     });
     saveStore(store);
-    markProgress("muayeneRx");
     form.reset();
     toast("Rapor/reçete kaydedildi.");
     refreshPage();
@@ -1513,7 +1359,6 @@ document.addEventListener("submit", function (e)
     patient.phone = String(fd.get("phone")).trim();
     patient.insurance = fd.get("insurance");
     saveStore(store);
-    markProgress("muayeneManage");
     toast("Hasta bilgileri güncellendi.");
     refreshPage();
   }
@@ -1536,6 +1381,12 @@ document.addEventListener("DOMContentLoaded", function ()
       shell.insertBefore(bar, shell.firstChild.nextSibling);
     }
   }
+  
+  const testModeToggle = document.getElementById("test-mode-toggle");
+  if (testModeToggle) {
+    testModeToggle.checked = isTestMode();
+  }
+
   refreshPage();
 });
 
