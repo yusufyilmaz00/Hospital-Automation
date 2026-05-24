@@ -1,6 +1,7 @@
 package com.seproje.hospital.auth;
 
 import com.seproje.hospital.auth.dto.AuthRequest;
+import com.seproje.hospital.auth.dto.LoginResponseDTO;
 import com.seproje.hospital.session.Session;
 import com.seproje.hospital.session.SessionConstants;
 import com.seproje.hospital.session.SessionService;
@@ -30,7 +31,7 @@ public class AuthController {
             description = "email ve password ile giriş yapar. Başarılı cevapta HTTP-only session cookie set edilir; sonraki /api çağrılarında bu cookie kullanılır."
     )
     @PostMapping("/login")
-    public ResponseEntity<String> login(@Valid @RequestBody AuthRequest request, HttpServletResponse response) {
+    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody AuthRequest request, HttpServletResponse response) {
         Session session = authService.login(request);
 
         Cookie cookie = new Cookie(SessionConstants.COOKIE_NAME, session.getToken());
@@ -40,7 +41,11 @@ public class AuthController {
 
         response.addCookie(cookie);
 
-        return ResponseEntity.ok("ok");
+        LoginResponseDTO responseDTO = LoginResponseDTO.builder()
+                .type(session.getUserType())
+                .build();
+
+        return ResponseEntity.ok(responseDTO);
     }
 
     @Operation(
