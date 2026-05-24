@@ -720,8 +720,51 @@ function renderGiris()
     "</form></div>";
 }
 
+function updateNavigationVisibility() {
+  const store = getStore();
+  const session = store.session;
+  let role = null;
+  if (session) {
+    role = session.kind === 'patient' ? 'HASTA' : session.role;
+  }
+
+  const checkAccess = (href) => {
+    if (href === 'index.html') return true;
+    if (href === 'giris.html') return !session;
+    if (session) {
+      if (role === 'HASTA') return ['profil.html', 'muayene.html', 'rezervasyon.html', 'odeme.html'].includes(href);
+      if (role === 'DR') return ['profil.html', 'doktor-panel.html', 'hasta-listesi.html', 'muayene.html'].includes(href);
+      if (role === 'KG') return ['profil.html', 'kayit.html', 'hasta-listesi.html', 'personel-kayit.html'].includes(href);
+      if (role === 'RG') return ['profil.html', 'rezervasyon.html', 'hasta-listesi.html', 'doktor-panel.html'].includes(href);
+      if (role === 'VZ') return ['profil.html', 'odeme.html', 'hasta-listesi.html'].includes(href);
+    }
+    return false;
+  };
+
+  const mainNav = document.querySelector('header.site-header nav.top-nav');
+  if (mainNav) {
+    const links = mainNav.querySelectorAll('a');
+    links.forEach(link => {
+      const href = link.getAttribute('href');
+      const hasAccess = checkAccess(href);
+      
+      link.style.display = 'inline-block';
+      if (hasAccess) {
+        link.style.opacity = '1';
+        link.style.pointerEvents = 'auto';
+        link.style.cursor = 'pointer';
+      } else {
+        link.style.opacity = '0.4';
+        link.style.pointerEvents = 'none';
+        link.style.cursor = 'not-allowed';
+      }
+    });
+  }
+}
+
 function refreshPage()
 {
+  updateNavigationVisibility();
   const page = document.body.dataset.page;
   if (page === "index")
   {
@@ -762,6 +805,105 @@ function refreshPage()
   else if (page === "personel-kayit")
   {
     renderPersonelKayit().catch(console.error);
+  }
+  else if (page === "api-test")
+  {
+    renderApiTest().catch(console.error);
+  }
+}
+
+async function renderApiTest() {
+  const el = document.getElementById("dummy-data");
+  if (!el) return;
+
+  const endpoints = [
+    { method: "GET", name: "Hasta Self", url: "http://localhost:8080/api/hasta/self", category: "Hasta İşlemleri" },
+    { method: "PUT", name: "Hasta Boy Güncelle", url: "http://localhost:8080/api/hasta/self/boy", category: "Hasta İşlemleri" },
+    { method: "PUT", name: "Hasta Kilo Güncelle", url: "http://localhost:8080/api/hasta/self/kilo", category: "Hasta İşlemleri" },
+    { method: "PUT", name: "Hasta İletişim Güncelle", url: "http://localhost:8080/api/hasta/self/iletisim", category: "Hasta İşlemleri" },
+    
+    { method: "GET", name: "Doktor Profil", url: "http://localhost:8080/api/doktor", category: "Doktor İşlemleri" },
+    { method: "POST", name: "Doktor Kayıt", url: "http://localhost:8080/api/doktor/register", category: "Doktor İşlemleri" },
+    { method: "GET", name: "Doktor Randevular", url: "http://localhost:8080/api/doktor/randevular", category: "Doktor İşlemleri" },
+    { method: "GET", name: "Randevu Hastası Getir", url: "http://localhost:8080/api/doktor/randevu/1/hasta", category: "Doktor İşlemleri" },
+    { method: "PUT", name: "Randevu Süresi Güncelle", url: "http://localhost:8080/api/doktor/randevu/1/sure", category: "Doktor İşlemleri" },
+    { method: "POST", name: "Tedavi Ekle", url: "http://localhost:8080/api/doktor/randevu/1/tedavi", category: "Doktor İşlemleri" },
+    { method: "DELETE", name: "Tedavi Sil", url: "http://localhost:8080/api/doktor/randevu/1/tedavi/1", category: "Doktor İşlemleri" },
+    { method: "POST", name: "Reçete Ekle", url: "http://localhost:8080/api/doktor/randevu/1/tedavi/1/recete", category: "Doktor İşlemleri" },
+    { method: "DELETE", name: "Reçete Sil", url: "http://localhost:8080/api/doktor/randevu/1/tedavi/1/recete/1", category: "Doktor İşlemleri" },
+    { method: "POST", name: "Rapor Ekle", url: "http://localhost:8080/api/doktor/randevu/1/rapor", category: "Doktor İşlemleri" },
+    { method: "DELETE", name: "Rapor Sil", url: "http://localhost:8080/api/doktor/randevu/1/rapor/1", category: "Doktor İşlemleri" },
+    { method: "PUT", name: "Hasta Boy (Doktor)", url: "http://localhost:8080/api/doktor/hasta/1/boy", category: "Doktor İşlemleri" },
+    { method: "PUT", name: "Hasta Kilo (Doktor)", url: "http://localhost:8080/api/doktor/hasta/1/kilo", category: "Doktor İşlemleri" },
+    { method: "POST", name: "Hastalık Ekle", url: "http://localhost:8080/api/doktor/hasta/1/hastalik", category: "Doktor İşlemleri" },
+    { method: "PUT", name: "Hastalık Güncelle", url: "http://localhost:8080/api/doktor/hasta/1/hastalik/1", category: "Doktor İşlemleri" },
+    { method: "DELETE", name: "Hastalık Sil", url: "http://localhost:8080/api/doktor/hasta/1/hastalik/1", category: "Doktor İşlemleri" },
+    
+    { method: "POST", name: "KG Personel Kayıt", url: "http://localhost:8080/api/kayit/register", category: "Kayıt Görevlisi İşlemleri" },
+    { method: "POST", name: "Hasta Kayıt", url: "http://localhost:8080/api/kayit/hasta", category: "Kayıt Görevlisi İşlemleri" },
+    { method: "GET", name: "Hastaları Listele", url: "http://localhost:8080/api/kayit/hastalar", category: "Kayıt Görevlisi İşlemleri" },
+    
+    { method: "POST", name: "RG Personel Kayıt", url: "http://localhost:8080/api/randevu-gorevlisi/register", category: "Randevu Görevlisi İşlemleri" },
+    { method: "GET", name: "Doktorları Listele", url: "http://localhost:8080/api/randevu-gorevlisi/doktorlar", category: "Randevu Görevlisi İşlemleri" },
+    { method: "POST", name: "Randevu Al", url: "http://localhost:8080/api/randevu-gorevlisi/randevu", category: "Randevu Görevlisi İşlemleri" },
+    { method: "DELETE", name: "Randevu İptal", url: "http://localhost:8080/api/randevu-gorevlisi/randevu/1", category: "Randevu Görevlisi İşlemleri" },
+    { method: "GET", name: "Alternatif Tarihler", url: "http://localhost:8080/api/randevu-gorevlisi/alternatif-tarihler", category: "Randevu Görevlisi İşlemleri" },
+    
+    { method: "POST", name: "VZ Personel Kayıt", url: "http://localhost:8080/api/veznedar/register", category: "Vezne İşlemleri" },
+    { method: "POST", name: "Ödeme Al", url: "http://localhost:8080/api/veznedar/randevu/1/odeme", category: "Vezne İşlemleri" },
+    
+    { method: "POST", name: "Giriş Yap", url: "http://localhost:8080/api/auth/login", category: "Kimlik Doğrulama" },
+    { method: "POST", name: "Çıkış Yap", url: "http://localhost:8080/api/auth/logout", category: "Kimlik Doğrulama" }
+  ];
+
+  const categories = {};
+  endpoints.forEach((ep, i) => {
+    if (!categories[ep.category]) categories[ep.category] = [];
+    ep.id = i;
+    categories[ep.category].push(ep);
+  });
+
+  let html = '<div class="panel" style="margin-bottom: 0;"><h2>Backend Tüm Endpoint Testleri</h2>';
+  html += '<p class="hint">Spring Boot projenizdeki 32 adet mapping kategoriler halinde test ediliyor...</p></div>';
+
+  for (const cat in categories) {
+    html += '<div class="panel" style="max-width: 100%; overflow-x: auto; margin-top: 1rem;">';
+    html += '<h3 style="margin-top: 0; color: var(--accent);">' + esc(cat) + '</h3>';
+    html += '<table class="data-table"><thead><tr><th style="width: 80px;">Metot</th><th>Servis</th><th>Endpoint URL</th><th style="width: 140px;">Durum</th></tr></thead><tbody>';
+    
+    categories[cat].forEach(ep => {
+      html += '<tr id="api-test-row-' + ep.id + '">';
+      html += '<td><span class="badge" style="background: var(--surface); border: 1px solid var(--border); color: var(--text);">' + ep.method + '</span></td>';
+      html += '<td><strong>' + esc(ep.name) + '</strong></td>';
+      html += '<td><code style="background: #f1f5f9; padding: 0.15rem 0.35rem; border-radius: 4px; font-size: 0.85rem;">' + esc(ep.url) + '</code></td>';
+      html += '<td><span class="badge" style="background: #e2e8f0; color: #475569;">Bağlanılıyor...</span></td>';
+      html += '</tr>';
+    });
+    
+    html += '</tbody></table></div>';
+  }
+
+  el.innerHTML = html;
+
+  for (let i = 0; i < endpoints.length; i++) {
+    const ep = endpoints[i];
+    const rowId = 'api-test-row-' + i;
+    try {
+      const res = await fetch(ep.url, { method: ep.method, mode: 'cors' });
+      const row = document.getElementById(rowId);
+      if (row) {
+        if (res.ok) {
+          row.cells[3].innerHTML = '<span class="badge done">Başarılı (' + res.status + ')</span>';
+        } else {
+          row.cells[3].innerHTML = '<span class="badge" style="background: #dcfce7; color: #1a7f4b;">Bağlanıldı (' + res.status + ')</span>';
+        }
+      }
+    } catch (err) {
+      const row = document.getElementById(rowId);
+      if (row) {
+        row.cells[3].innerHTML = '<span class="badge" style="background: #fef2f2; color: #b91c1c;">Hata (Yok)</span>';
+      }
+    }
   }
 }
 
@@ -1371,14 +1513,11 @@ document.addEventListener("DOMContentLoaded", function ()
   {
     const bar = document.createElement("div");
     bar.id = "session-bar";
+    bar.className = "session-bar";
     const header = shell.querySelector("header.site-header");
-    if (header && header.nextSibling)
+    if (header)
     {
-      shell.insertBefore(bar, header.nextSibling);
-    }
-    else
-    {
-      shell.insertBefore(bar, shell.firstChild.nextSibling);
+      header.appendChild(bar);
     }
   }
   
