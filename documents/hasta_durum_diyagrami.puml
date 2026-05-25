@@ -1,0 +1,48 @@
+@startuml Hasta Durum Diyagrami
+
+skinparam stateFontSize 13
+skinparam stateArrowFontSize 11
+skinparam stateBackgroundColor #FDFEFE
+skinparam stateBorderColor #555555
+skinparam ArrowColor #333333
+
+title Hasta Süreç Durum Diyagramı
+
+[*] --> Kayıtsız
+
+Kayıtsız --> Kayıtlı : KayıtGörevlisi kaydeder
+
+Kayıtlı --> RandevuAlındı : RandevuGörevlisi oluşturur
+
+RandevuAlındı --> İptalEdildi : RandevuGörevlisi iptal eder
+İptalEdildi --> Kayıtlı
+
+RandevuAlındı --> Muayenede : Doktor erişir
+
+state Muayenede {
+  [*] --> HastaBilgileriGörüntülendi
+  HastaBilgileriGörüntülendi --> HastaBilgileriGüncelleniyor
+  HastaBilgileriGüncelleniyor --> HastaBilgileriGörüntülendi
+  HastaBilgileriGörüntülendi --> TedaviEkleniyor
+  TedaviEkleniyor --> TedaviEkleniyor
+  TedaviEkleniyor --> ReçeteYazılıyor
+  ReçeteYazılıyor --> TedaviEkleniyor
+  HastaBilgileriGörüntülendi --> RaporYazılıyor
+  RaporYazılıyor --> HastaBilgileriGörüntülendi
+}
+
+Muayenede --> MuayeneTamamlandı : Doktor süreyi kaydeder
+
+MuayeneTamamlandı --> ÖdemeAşaması : Veznedar başlatır
+
+state ÖdemeAşaması {
+  [*] --> SigortaSorgulanıyor
+  SigortaSorgulanıyor --> ÜcretHesaplanıyor
+  ÜcretHesaplanıyor --> ÖdemeAlındı
+}
+
+ÖdemeAşaması --> ÖdemeTamamlandı
+
+ÖdemeTamamlandı --> Kayıtlı
+
+@enduml

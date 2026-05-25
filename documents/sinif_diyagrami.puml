@@ -1,0 +1,193 @@
+@startuml Hospital-Automation Uygulama Alani Sinif Diyagrami
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 80
+
+' ===================== INTERFACE =====================
+
+interface AuthUser << interface >> {
+  + getId() : Long
+  + getEmail() : String
+  + getPassword() : String
+  + getUserType() : UserType
+}
+
+' ===================== ENUMS =====================
+
+enum UserType {
+  HASTA
+  DOKTOR
+  KAYIT_GOREVLISI
+  RANDEVU_GOREVLISI
+  VEZNEDAR
+}
+
+enum TedaviTipi {
+  AMELIYAT
+  ILAC_TEDAVISI
+  FIZIK_TEDAVI
+  SERVIS_YATIS
+}
+
+enum Bolum {
+  CARDIOLOGY
+  NEUROLOGY
+  ORTHOPEDICS
+  PEDIATRICS
+  DERMATOLOGY
+}
+
+enum Unvan {
+  INTERN
+  RESIDENT
+  SPECIALIST
+  ASSOCIATE_PROFESSOR
+  PROFESSOR
+}
+
+' ===================== ORTAK =====================
+
+package "common" {
+  class IletisimBilgisi << entity >> {
+    - id : Integer
+    - isim : String
+    - soyisim : String
+    - tckno : String
+    - telefon : String
+    - adres : String
+    - dogumTarihi : LocalDate
+  }
+}
+
+' ===================== AUTH / SESSION =====================
+
+package "auth / session" {
+  class Session << entity >> {
+    - id : UUID
+    - token : String
+    - userId : Long
+    - createdAt : LocalDateTime
+    - expiresAt : LocalDateTime
+    - active : Boolean
+    - userType : UserType
+  }
+}
+
+' ===================== PERSONEL =====================
+
+package "personel" {
+  abstract class Personel << MappedSuperclass >> {
+    - id : Long
+    - email : String
+    - password : String
+    - contactInformation : IletisimBilgisi
+  }
+
+  class KayitGorevlisi << entity >> {
+  }
+
+  class RandevuGorevlisi << entity >> {
+  }
+
+  class Veznedar << entity >> {
+  }
+
+  class Doktor << entity >> {
+    - department : Bolum
+    - unvan : Unvan
+    - activeReservations : List<Randevu>
+  }
+}
+
+' ===================== HASTA =====================
+
+package "hasta" {
+  class Hasta << entity >> {
+    - id : Long
+    - email : String
+    - password : String
+    - boy : Double
+    - kilo : Double
+    - iletisimBilgisi : IletisimBilgisi
+    - randevular : List<Randevu>
+    - hastaliklar : List<Hastalik>
+  }
+
+  class Hastalik << entity >> {
+    - id : Long
+    - detay : String
+  }
+}
+
+' ===================== RANDEVU =====================
+
+package "randevu" {
+  class Randevu << entity >> {
+    - id : Long
+    - randevuZamani : LocalDateTime
+    - ucret : Double
+    - sureDakika : Integer
+    - sigortaIndirimOrani : Double
+    - odendi : Boolean
+    - tedaviler : List<Tedavi>
+  }
+
+  class Tedavi << entity >> {
+    - id : Long
+    - tedaviTipi : TedaviTipi
+    - aciklama : String
+    - receteler : List<Recete>
+  }
+
+  class Rapor << entity >> {
+    - id : Long
+    - icerik : String
+  }
+
+  class Recete << entity >> {
+    - id : Long
+    - barkod : String
+    - ilaclar : List<String>
+    + ilacEkle(ilac : String) : void
+    + ilacSil(ilac : String) : void
+  }
+}
+
+' ===================== KALITIM =====================
+
+Personel    ..|> AuthUser
+Hasta       ..|> AuthUser
+
+KayitGorevlisi    --|> Personel
+RandevuGorevlisi  --|> Personel
+Veznedar          --|> Personel
+Doktor            --|> Personel
+
+' ===================== KOMPOZISYON / AGREGASYON =====================
+
+Personel "1" *-right- "1" IletisimBilgisi : contactInformation\n(OneToOne, cascade ALL)
+Hasta    "1" *-right- "1" IletisimBilgisi : iletisimBilgisi\n(OneToOne, cascade ALL)
+
+Hasta "1" *-down- "0..*" Hastalik    : hastaliklar\n(OneToMany, cascade ALL)
+Hasta "1" *-down- "0..*" Randevu     : randevular\n(OneToMany, cascade ALL)
+
+Doktor "1" *-down- "0..*" Randevu    : activeReservations\n(OneToMany, cascade ALL)
+
+Randevu "1" *-right- "0..*" Tedavi   : tedaviler\n(OneToMany, cascade ALL)
+
+Tedavi  "1" *-right- "0..*" Recete   : receteler\n(OneToMany, cascade ALL)
+
+Rapor "0..*" -up-> "1" Randevu       : randevu\n(ManyToOne)
+
+' ===================== BASIT ASOCIASYONLAR =====================
+
+Doktor     --> Bolum   : department
+Doktor     --> Unvan   : unvan
+Tedavi     --> TedaviTipi : tedaviTipi
+Session    --> UserType   : userType
+
+@enduml

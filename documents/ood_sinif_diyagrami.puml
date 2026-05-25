@@ -1,0 +1,574 @@
+@startuml Hospital-Automation OOD Sinif Diyagrami
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam packageStyle rectangle
+skinparam linetype polyline
+skinparam nodesep 50
+skinparam ranksep 70
+skinparam ArrowColor #444444
+skinparam ClassBorderColor #333333
+skinparam PackageBorderColor #888888
+
+' ============================================================
+'  KATMAN: AUTH / SESSION / SECURITY
+' ============================================================
+
+package "auth" #FDEBD0 {
+
+  interface AuthUser << interface >> {
+    + getId() : Long
+    + getEmail() : String
+    + getPassword() : String
+    + getUserType() : UserType
+  }
+
+  interface "AuthUserRepository<T>" as AuthUserRepository << interface >> {
+    + findByEmail(email : String) : Optional<T>
+  }
+
+  enum UserType {
+    HASTA
+    DOKTOR
+    KAYIT_GOREVLISI
+    RANDEVU_GOREVLISI
+    VEZNEDAR
+  }
+
+  class AuthService << @Service >> {
+    - passwordEncoder : PasswordEncoder
+    - sessionService : SessionService
+    - authUserService : AuthUserService
+    + login(request : AuthRequest) : Session
+    - findByEmail(email : String) : Optional<AuthUser>
+  }
+
+  class AuthUserService << @Service >> {
+    - hastaRepository : HastaRepository
+    - doctorRepository : DoctorRepository
+    - kayitGorevlisiRepository : KayitGorevlisiRepository
+    - randevuGorevlisiRepository : RandevuGorevlisiRepository
+    - veznedarRepository : VeznedarRepository
+    + getRepository(userType : UserType) : AuthUserRepository<?>
+    + getClass(userType : UserType) : Class<? extends AuthUser>
+  }
+
+  class AuthController << @RestController >> {
+    - authService : AuthService
+    - sessionService : SessionService
+    + login(request : AuthRequest) : ResponseEntity<LoginResponseDTO>
+    + logout() : ResponseEntity<Void>
+  }
+}
+
+package "session" #D5F5E3 {
+
+  class Session << @Entity >> {
+    - id : UUID
+    - token : String
+    - userId : Long
+    - createdAt : LocalDateTime
+    - expiresAt : LocalDateTime
+    - active : Boolean
+    - userType : UserType
+  }
+
+  class SessionService << @Service >> {
+    - sessionRepository : SessionRepository
+    + createSession(user : AuthUser) : Session
+    + getByToken(token : String) : Optional<Session>
+    + isValid(session : Session) : Boolean
+    + invalidate(session : Session) : void
+    + invalidateAllUserSessions(userId : Integer) : void
+  }
+
+  interface SessionRepository << JpaRepository >> {
+    + findByToken(token : String) : Optional<Session>
+    + findAllByUserIdAndActiveTrue(userId : Integer) : List<Session>
+  }
+}
+
+package "security" #D6EAF8 {
+
+  class SessionAuthFilter << @Component >> {
+    - sessionService : SessionService
+    - authUserService : AuthUserService
+    # doFilterInternal(req, res, chain) : void
+    - getSession(token : String) : Optional<Session>
+    - setAuth(session : Session) : void
+  }
+
+  class SecurityContextUtil << utility >> {
+    + {static} set(userId : Long, userType : UserType) : void
+    + {static} currentUser(clazz : Class<T>) : Optional<Long>
+  }
+
+  class CookieUtil << utility >> {
+    + {static} getCookie(request, name : String) : Optional<String>
+    + {static} addCookie(response, name, value, maxAge) : void
+    + {static} deleteCookie(response, name) : void
+  }
+}
+
+' ============================================================
+'  KATMAN: DOMAIN - COMMON
+' ============================================================
+
+package "common" #F9F3E3 {
+
+  class IletisimBilgisi << @Entity >> {
+    - id : Integer
+    - isim : String
+    - soyisim : String
+    - tckno : String
+    - telefon : String
+    - adres : String
+    - dogumTarihi : LocalDate
+  }
+
+  interface IletisimBilgisiRepository << JpaRepository >> {
+  }
+
+  class IletisimBilgisiMapper << @Component >> {
+    + toEntity(dto : IletisimBilgisiDTO) : IletisimBilgisi
+    + toDTO(entity : IletisimBilgisi) : IletisimBilgisiDTO
+  }
+}
+
+' ============================================================
+'  KATMAN: DOMAIN - PERSONEL
+' ============================================================
+
+package "personel" #E8DAEF {
+
+  abstract class Personel << @MappedSuperclass >> {
+    - id : Long
+    - email : String
+    - password : String
+    - contactInformation : IletisimBilgisi
+  }
+
+  class KayitGorevlisi << @Entity >> {
+    + getUserType() : UserType
+  }
+
+  class RandevuGorevlisi << @Entity >> {
+    + getUserType() : UserType
+  }
+
+  class Veznedar << @Entity >> {
+    + getUserType() : UserType
+  }
+
+  class Doktor << @Entity >> {
+    - department : Bolum
+    - unvan : Unvan
+    - activeReservations : List<Randevu>
+    + getUserType() : UserType
+  }
+
+  enum Bolum {
+    CARDIOLOGY
+    NEUROLOGY
+    ORTHOPEDICS
+    PEDIATRICS
+    DERMATOLOGY
+  }
+
+  enum Unvan {
+    INTERN
+    RESIDENT
+    SPECIALIST
+    ASSOCIATE_PROFESSOR
+    PROFESSOR
+  }
+}
+
+' ============================================================
+'  KATMAN: DOMAIN - HASTA
+' ============================================================
+
+package "hasta" #D5F5E3 {
+
+  class Hasta << @Entity >> {
+    - id : Long
+    - email : String
+    - password : String
+    - boy : Double
+    - kilo : Double
+    - iletisimBilgisi : IletisimBilgisi
+    - randevular : List<Randevu>
+    - hastaliklar : List<Hastalik>
+    + getUserType() : UserType
+  }
+
+  class Hastalik << @Entity >> {
+    - id : Long
+    - detay : String
+  }
+
+  interface HastaService << interface >> {
+    + create(dto : HastaRequestDTO) : HastaResponseDTO
+    + getById(id : Long) : HastaResponseDTO
+    + getAll() : List<HastaResponseDTO>
+    + updateBoy(id : Long, boy : Double) : void
+    + updateKilo(id : Long, kilo : Double) : void
+    + updateIletisim(id : Long, iletisim : IletisimBilgisi) : void
+    + findById(id : Long) : Optional<Hasta>
+    + createHastalik(hastaId : Long, detay : String) : void
+    + updateHastalik(hastaId, id : Long, detay : String) : void
+    + deleteHastalik(hastaId, id : Long) : void
+  }
+
+  class HastaServiceImpl << @Service >> {
+    - hastaRepository : HastaRepository
+    - hastalikRepository : HastalikRepository
+    - iletisimRepository : IletisimBilgisiRepository
+    - iletisimMapper : IletisimBilgisiMapper
+    - hastaMapper : HastaMapper
+    - passwordEncoder : PasswordEncoder
+    - hastalikMapper : HastalikMapper
+  }
+
+  interface HastaRepository << AuthUserRepository<Hasta> >> {
+  }
+
+  interface HastalikRepository << JpaRepository >> {
+  }
+
+  class HastaController << @RestController >> {
+    - hastaService : HastaService
+    - iletisimMapper : IletisimBilgisiMapper
+    + getSelf() : ResponseEntity<HastaResponseDTO>
+    + updateBoy(boy : Double) : ResponseEntity<Void>
+    + updateKilo(kilo : Double) : ResponseEntity<Void>
+    + updateIletisim(dto : IletisimBilgisiDTO) : ResponseEntity<Void>
+  }
+
+  class HastaMapper << @Component >> {
+    + toDTO(hasta : Hasta) : HastaResponseDTO
+  }
+
+  class HastalikMapper << @Component >> {
+    + toDTO(hastalik : Hastalik) : HastalikDTO
+  }
+}
+
+' ============================================================
+'  KATMAN: DOMAIN - RANDEVU
+' ============================================================
+
+package "randevu" #FDEBD0 {
+
+  class Randevu << @Entity >> {
+    - id : Long
+    - randevuZamani : LocalDateTime
+    - ucret : Double
+    - sureDakika : Integer
+    - sigortaIndirimOrani : Double
+    - odendi : Boolean
+    - tedaviler : List<Tedavi>
+  }
+
+  class Tedavi << @Entity >> {
+    - id : Long
+    - tedaviTipi : TedaviTipi
+    - aciklama : String
+    - receteler : List<Recete>
+  }
+
+  class Rapor << @Entity >> {
+    - id : Long
+    - icerik : String
+  }
+
+  class Recete << @Entity >> {
+    - id : Long
+    - barkod : String
+    - ilaclar : List<String>
+    + ilacEkle(ilac : String) : void
+    + ilacSil(ilac : String) : void
+  }
+
+  enum TedaviTipi {
+    AMELIYAT
+    ILAC_TEDAVISI
+    FIZIK_TEDAVI
+    SERVIS_YATIS
+  }
+
+  interface RandevuService << interface >> {
+    + ucretHesaplaVeOdemeAl(randevuId : Long) : RandevuOdemeDTO
+  }
+
+  class RandevuServiceImpl << @Service >> {
+    - randevuRepository : RandevuRepository
+    - hastaService : HastaService
+    - doctorService : DoctorService
+  }
+
+  interface RandevuRepository << JpaRepository >> {
+    + findByDoktorId(doktorId : Long) : List<Randevu>
+    + findByHastaId(hastaId : Long) : List<Randevu>
+  }
+
+  interface RaporRepository << JpaRepository >> {
+  }
+
+  interface ReceteRepository << JpaRepository >> {
+  }
+}
+
+' ============================================================
+'  KATMAN: SERVIS - DOKTOR
+' ============================================================
+
+package "personel.doktor" #EBF5FB {
+
+  interface DoctorService << interface >> {
+    + createDoktor(dto : DoktorCreateDTO) : Doktor
+    + getAllDoctors() : List<Doktor>
+    + getDoctorById(id : Long) : Doktor
+    + getActiveReservations(doctorId : Long) : List<Randevu>
+    + addReservation(doctorId, time, hasta) : Randevu
+    + removeReservation(doctorId, randevuId : Long) : void
+    + checkAvailability(doctorId, time) : boolean
+    + isAvailable(doctorId, start, end, interval) : List<LocalDateTime>
+    + getMyRandevular(doktorId : Long) : List<DoktorRandevuDTO>
+    + getHastaByRandevuId(doktorId, randevuId : Long) : HastaResponseDTO
+    + addTedavi(doktorId, randevuId, dto) : HastaTedaviDTO
+    + removeTedavi(doktorId, randevuId, tedaviId : Long) : void
+    + addRecete(doktorId, randevuId, tedaviId, dto) : ReceteDTO
+    + removeRecete(doktorId, randevuId, tedaviId, receteId : Long) : void
+    + addRapor(doktorId, randevuId, dto) : RaporResponseDTO
+    + removeRapor(doktorId, randevuId, raporId : Long) : void
+    + updateHastaBoy(doktorId, hastaId, boy) : void
+    + updateHastaKilo(doktorId, hastaId, kilo) : void
+    + addHastalik(doktorId, hastaId, detay) : void
+    + updateHastalik(doktorId, hastaId, hastalikId, detay) : void
+    + deleteHastalik(doktorId, hastaId, hastalikId : Long) : void
+  }
+
+  class DoctorServiceImpl << @Service >> {
+    - doctorRepository : DoctorRepository
+    - hastaService : HastaService
+    - randevuRepository : RandevuRepository
+    - raporRepository : RaporRepository
+    - receteRepository : ReceteRepository
+    - iletisimMapper : IletisimBilgisiMapper
+    - passwordEncoder : PasswordEncoder
+  }
+
+  interface DoctorRepository << AuthUserRepository<Doktor> >> {
+  }
+
+  class DoktorController << @RestController >> {
+    - doctorService : DoctorService
+    - doktorMapper : DoktorMapper
+    + doktorKaydet(dto) : ResponseEntity<DoktorResponseDTO>
+    + doktorlariListele() : ResponseEntity<List<DoktorResponseDTO>>
+    + randevulariListele() : ResponseEntity<List<DoktorRandevuDTO>>
+    + hastayiGor(randevuId) : ResponseEntity<HastaResponseDTO>
+    + tedaviEkle(randevuId, dto) : ResponseEntity<HastaTedaviDTO>
+    + tedaviSil(randevuId, tedaviId) : ResponseEntity<Void>
+    + receteEkle(randevuId, tedaviId, dto) : ResponseEntity<ReceteDTO>
+    + receteSil(randevuId, tedaviId, receteId) : ResponseEntity<Void>
+    + raporEkle(randevuId, dto) : ResponseEntity<RaporResponseDTO>
+    + raporSil(randevuId, raporId) : ResponseEntity<Void>
+    + hastalikEkle(hastaId, dto) : ResponseEntity<Void>
+    + hastalikGuncelle(hastaId, hastalikId, dto) : ResponseEntity<Void>
+    + hastalikSil(hastaId, hastalikId) : ResponseEntity<Void>
+  }
+
+  class DoktorMapper << @Component >> {
+    + toDTO(doktor : Doktor) : DoktorResponseDTO
+  }
+}
+
+' ============================================================
+'  KATMAN: SERVIS - KAYIT GOREVLİSİ
+' ============================================================
+
+package "personel.kayit" #F2F3F4 {
+
+  interface KayitGorevlisiService << interface >> {
+    + create(dto : KayitGorevlisiRequestDTO) : KayitGorevlisiResponseDTO
+    + getAll() : List<KayitGorevlisiResponseDTO>
+  }
+
+  class KayitGorevlisiServiceImpl << @Service >> {
+    - kayitGorevlisiRepository : KayitGorevlisiRepository
+    - hastaService : HastaService
+    - iletisimMapper : IletisimBilgisiMapper
+    - passwordEncoder : PasswordEncoder
+  }
+
+  interface KayitGorevlisiRepository << AuthUserRepository<KayitGorevlisi> >> {
+  }
+
+  class KayitGorevlisiController << @RestController >> {
+    - kayitGorevlisiService : KayitGorevlisiService
+    + register(dto) : ResponseEntity<KayitGorevlisiResponseDTO>
+    + hastaKaydet(dto) : ResponseEntity<HastaResponseDTO>
+    + hastalariListele() : ResponseEntity<List<HastaResponseDTO>>
+  }
+}
+
+' ============================================================
+'  KATMAN: SERVIS - RANDEVU GOREVLİSİ
+' ============================================================
+
+package "personel.randevu_g" #F9EBEA {
+
+  interface RandevuGorevlisiService << interface >> {
+    + create(dto : RandevuGorevlisiCreateDTO) : RandevuGorevlisi
+    + getById(id : Long) : RandevuGorevlisi
+    + getAll() : List<RandevuGorevlisi>
+    + delete(id : Long) : void
+    + randevuIslemiYap(hastaId, doktorId, zaman) : Randevu
+    + randevuIptalEt(doktorId, randevuId : Long) : void
+    + checkDoctorAvailability(doktorId, zaman) : boolean
+    + alternatifTarihleriListele(haftaBaslangic) : List<AlternatifTarihDTO>
+  }
+
+  class RandevuGorevlisiServiceImpl << @Service >> {
+    - randevuGorevlisiRepository : RandevuGorevlisiRepository
+    - hastaService : HastaService
+    - doctorService : DoctorService
+    - iletisimMapper : IletisimBilgisiMapper
+    - passwordEncoder : PasswordEncoder
+  }
+
+  interface RandevuGorevlisiRepository << AuthUserRepository<RandevuGorevlisi> >> {
+  }
+
+  class RandevuGorevlisiController << @RestController >> {
+    - randevuGorevlisiService : RandevuGorevlisiService
+    - doctorService : DoctorService
+    + register(dto) : ResponseEntity<?>
+    + doktorlariListele() : ResponseEntity<List<DoktorResponseDTO>>
+    + randevuOlustur(dto) : ResponseEntity<RandevuCreateResponseDTO>
+    + randevuIptalEt(randevuId) : ResponseEntity<Void>
+  }
+}
+
+' ============================================================
+'  KATMAN: SERVIS - VEZNEDAR
+' ============================================================
+
+package "personel.vezne" #F0FFF0 {
+
+  interface VeznedarService << interface >> {
+    + create(dto : VeznedarCreateDTO) : VeznedarResponseDTO
+  }
+
+  class VeznedarServiceImpl << @Service >> {
+    - veznedarRepository : VeznedarRepository
+    - iletisimMapper : IletisimBilgisiMapper
+    - passwordEncoder : PasswordEncoder
+  }
+
+  interface VeznedarRepository << AuthUserRepository<Veznedar> >> {
+  }
+
+  class VeznedarController << @RestController >> {
+    - randevuService : RandevuService
+    - veznedarService : VeznedarService
+    + veznedarOlustur(dto) : ResponseEntity<VeznedarResponseDTO>
+    + randevuOdemesiAl(randevuId) : ResponseEntity<RandevuOdemeDTO>
+  }
+}
+
+' ============================================================
+'  KALITIM & INTERFACE GERÇEKLEMELERI
+' ============================================================
+
+Personel    ..|> AuthUser
+Hasta       ..|> AuthUser
+
+KayitGorevlisi    --|> Personel
+RandevuGorevlisi  --|> Personel
+Veznedar          --|> Personel
+Doktor            --|> Personel
+
+HastaRepository    --|> AuthUserRepository
+DoctorRepository   --|> AuthUserRepository
+KayitGorevlisiRepository   --|> AuthUserRepository
+RandevuGorevlisiRepository --|> AuthUserRepository
+VeznedarRepository         --|> AuthUserRepository
+
+HastaServiceImpl          ..|> HastaService
+DoctorServiceImpl         ..|> DoctorService
+KayitGorevlisiServiceImpl ..|> KayitGorevlisiService
+RandevuGorevlisiServiceImpl ..|> RandevuGorevlisiService
+VeznedarServiceImpl       ..|> VeznedarService
+RandevuServiceImpl        ..|> RandevuService
+
+' ============================================================
+'  ENTITY İLİŞKİLERİ
+' ============================================================
+
+Personel "1" *-- "1" IletisimBilgisi
+Hasta    "1" *-- "1" IletisimBilgisi
+
+Hasta  "1" *-- "0..*" Hastalik  : hastaliklar
+Hasta  "1" *-- "0..*" Randevu   : randevular
+Doktor "1" *-- "0..*" Randevu   : activeReservations
+
+Randevu "1" *-- "0..*" Tedavi   : tedaviler
+Tedavi  "1" *-- "0..*" Recete   : receteler
+Rapor "0..*" --> "1"   Randevu
+
+Doktor  --> Bolum
+Doktor  --> Unvan
+Tedavi  --> TedaviTipi
+Session --> UserType
+
+' ============================================================
+'  KATMANLAR ARASI BAĞIMLILIKLAR
+' ============================================================
+
+' Controllers → Services
+AuthController               ..> AuthService
+AuthController               ..> SessionService
+HastaController              ..> HastaService
+DoktorController             ..> DoctorService
+KayitGorevlisiController     ..> KayitGorevlisiService
+RandevuGorevlisiController   ..> RandevuGorevlisiService
+RandevuGorevlisiController   ..> DoctorService
+VeznedarController           ..> VeznedarService
+VeznedarController           ..> RandevuService
+
+' Services → Repositories
+HastaServiceImpl         ..> HastaRepository
+HastaServiceImpl         ..> HastalikRepository
+HastaServiceImpl         ..> IletisimBilgisiRepository
+DoctorServiceImpl        ..> DoctorRepository
+DoctorServiceImpl        ..> HastaService
+DoctorServiceImpl        ..> RandevuRepository
+DoctorServiceImpl        ..> RaporRepository
+DoctorServiceImpl        ..> ReceteRepository
+KayitGorevlisiServiceImpl ..> KayitGorevlisiRepository
+KayitGorevlisiServiceImpl ..> HastaService
+RandevuGorevlisiServiceImpl ..> RandevuGorevlisiRepository
+RandevuGorevlisiServiceImpl ..> HastaService
+RandevuGorevlisiServiceImpl ..> DoctorService
+RandevuServiceImpl       ..> RandevuRepository
+VeznedarServiceImpl      ..> VeznedarRepository
+
+' Auth / Session bağımlılıkları
+AuthService ..> SessionService
+AuthService ..> AuthUserService
+AuthUserService ..> HastaRepository
+AuthUserService ..> DoctorRepository
+AuthUserService ..> KayitGorevlisiRepository
+AuthUserService ..> RandevuGorevlisiRepository
+AuthUserService ..> VeznedarRepository
+SessionService ..> SessionRepository
+
+' Security filter bağımlılıkları
+SessionAuthFilter ..> SessionService
+SessionAuthFilter ..> AuthUserService
+SessionAuthFilter ..> SecurityContextUtil
+
+@enduml
