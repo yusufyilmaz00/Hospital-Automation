@@ -1,53 +1,109 @@
+//
+// Utkan Başurgan
+//
+//--------------------------------------------------------------------------------------------------------------------------------
 
-function normalizeStore(store) {
-  store.patients.forEach(function (p) {
-    if (!p.appointments) {
+function normalizeStore(store)
+{
+  if (!store.staffProfiles || Object.keys(store.staffProfiles).length === 0)
+  {
+    const base = window.HOSPITAL_DATA && window.HOSPITAL_DATA["data/patients.json"];
+    store.staffProfiles = base && base.staffProfiles
+      ? JSON.parse(JSON.stringify(base.staffProfiles))
+      : {};
+  }
+  store.patients.forEach(function (p)
+  {
+    if (!p.appointments)
+    {
       p.appointments = [];
     }
-    if (!p.records) {
+    if (!p.records)
+    {
       p.records = [];
     }
-    if (!p.treatments) {
+    if (!p.treatments)
+    {
       p.treatments = [];
     }
-    if (!p.prescriptions) {
+    if (!p.prescriptions)
+    {
       p.prescriptions = [];
     }
   });
-  store.doctors.forEach(function (d) {
-    if (!d.availableSlots) {
+  store.doctors.forEach(function (d)
+  {
+    if (!d.availableSlots)
+    {
       d.availableSlots = [];
     }
-    if (!d.alternativeSlots) {
+    if (!d.alternativeSlots)
+    {
       d.alternativeSlots = [];
     }
   });
   return store;
 }
 
-function getStore() {
-  if (!isTestMode()) {
+function getBaseStore()
+{
+  return normalizeStore(JSON.parse(
+    JSON.stringify(window.HOSPITAL_DATA["data/patients.json"])
+  ));
+}
+
+function shouldRefreshStore(store, base)
+{
+  const meta = localStorage.getItem(STORE_META_KEY);
+
+  if (meta !== STORE_SEED_VERSION)
+  {
+    return true;
+  }
+
+  if (!store || !Array.isArray(store.patients) || !Array.isArray(store.doctors) || !Array.isArray(store.payments))
+  {
+    return true;
+  }
+
+  return store.patients.length < base.patients.length ||
+    store.doctors.length < base.doctors.length ||
+    store.payments.length < base.payments.length;
+}
+
+function getStore()
+{
+  if (!isTestMode())
+  {
     console.warn("[API Mode] API Fetch is not fully implemented yet. Returning empty store.");
     return normalizeStore({ patients: [], doctors: [], payments: [] });
   }
 
+  const base = getBaseStore();
   const raw = localStorage.getItem(STORE_KEY);
-  if (raw) {
-    return normalizeStore(JSON.parse(raw));
+  if (raw)
+  {
+    const store = normalizeStore(JSON.parse(raw));
+    if (!shouldRefreshStore(store, base))
+    {
+      return store;
+    }
   }
-  const base = normalizeStore(JSON.parse(
-    JSON.stringify(window.HOSPITAL_DATA["data/patients.json"])
-  ));
+
   saveStore(base);
   return base;
 }
 
-function saveStore(store) {
+function saveStore(store)
+{
+  localStorage.setItem(STORE_META_KEY, STORE_SEED_VERSION);
   localStorage.setItem(STORE_KEY, JSON.stringify(store));
 }
 
-function resetStore() {
+function resetStore()
+{
   localStorage.removeItem(STORE_KEY);
+  localStorage.removeItem(STORE_META_KEY);
   localStorage.removeItem(MUAYENE_PID_KEY);
   getStore();
 }
@@ -136,3 +192,4 @@ function bookSlot(patientId, doctorId, slot, fromAlt) {
   return true;
 }
 
+//--------------------------------------------------------------------------------------------------------------------------------

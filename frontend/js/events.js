@@ -1,3 +1,7 @@
+//
+// Utkan Başurgan
+//
+//--------------------------------------------------------------------------------------------------------------------------------
 
 function apptFormPatientDoctor() {
   const form = document.getElementById("appt-form");
@@ -8,6 +12,44 @@ function apptFormPatientDoctor() {
     patientId: form.querySelector("[name=patientId]").value,
     doctorId: form.querySelector("[name=doctorId]").value
   };
+}
+
+function isValidTckn(tckn)
+{
+  if (!/^[1-9][0-9]{10}$/.test(tckn))
+  {
+    return false;
+  }
+
+  const total = tckn
+    .slice(0, 10)
+    .split("")
+    .reduce(function (sum, digit)
+    {
+      return sum + Number(digit);
+    }, 0);
+
+  return total % 10 === Number(tckn[10]);
+}
+
+function requestErrorMessage(data, fallback)
+{
+  if (data && data.errors)
+  {
+    if (Array.isArray(data.errors))
+    {
+      return data.errors.join(", ");
+    }
+
+    return Object.values(data.errors).join(", ");
+  }
+
+  if (data && data.message)
+  {
+    return data.message;
+  }
+
+  return fallback;
 }
 
 function setupEvents() {
@@ -22,7 +64,7 @@ document.addEventListener("click", function (e)
   if (action === "logout")
   {
     if (!isTestMode()) {
-      fetch("http://localhost:8080/api/auth/logout", {
+      fetch(apiUrl("/api/auth/logout"), {
         method: "POST",
         credentials: "include"
       }).catch(console.error);
@@ -108,6 +150,11 @@ document.addEventListener("click", function (e)
   if (action === "open-muayene")
   {
     localStorage.setItem(MUAYENE_PID_KEY, btn.dataset.id);
+    if (document.body.dataset.page === "doktor-panel")
+    {
+      window.location.href = "muayene.html";
+      return;
+    }
     refreshPage();
     return;
   }
@@ -241,7 +288,7 @@ document.addEventListener("click", function (e)
   if (action === "take-payment")
   {
     if (!isTestMode()) {
-      fetch("http://localhost:8080/api/veznedar/randevu/1/odeme", {
+      fetch(apiUrl("/api/veznedar/randevu/1/odeme"), {
         method: "POST",
         credentials: "include"
       }).then(res => {
@@ -289,7 +336,7 @@ document.addEventListener("submit", function (e)
     const email = String(fd.get("email")).trim();
     const password = String(fd.get("password")).trim();
     
-    fetch("http://localhost:8080/api/auth/login", {
+    fetch(apiUrl("/api/auth/login"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -320,10 +367,18 @@ document.addEventListener("submit", function (e)
         role: role,
         email: email
       };
-      if (isPatient) {
+      if (isPatient)
+      {
         sessionData.name = email;
-      } else {
+      }
+      else
+      {
         sessionData.roleLabel = labelMap[role] || role;
+        sessionData.staffId = data.id || data.personelId || data.staffId || data.doctorId || "";
+        if (role === "DR" && typeof normalizeDoctorProfile === "function")
+        {
+          sessionData.staffProfile = normalizeDoctorProfile(data, sessionData);
+        }
       }
       setSession(sessionData);
       toast("Giriş başarılı.");
@@ -362,7 +417,81 @@ document.addEventListener("submit", function (e)
     }
     setSession({ kind: "patient", patientId: p.id, name: p.name, tckn: p.tckn });
     toast("Hoş geldiniz, " + p.name);
-    window.location.href = (window.location.pathname.endsWith("index.html") || window.location.pathname.endsWith("/")) ? "pages/kayit.html" : "kayit.html";
+    window.location.href = (window.location.pathname.endsWith("index.html") || window.location.pathname.endsWith("/")) ? "pages/profil.html" : "profil.html";
+  }
+  if (kind === "register-staff")
+  {
+    e.preventDefault();
+    if (isTestMode()) {
+       toast("Personel kaydı sadece API açıkken çalışır.", true);
+       return;
+    }
+    const roleType = fd.get("roleType");
+    let endpoint = "";
+    if (roleType === "KG") endpoint = apiUrl("/api/kayit/register");
+    else if (roleType === "RG") endpoint = apiUrl("/api/randevu-gorevlisi/register");
+    else if (roleType === "VZ") endpoint = apiUrl("/api/veznedar/register");
+    else if (roleType === "DR") endpoint = apiUrl("/api/doktor/register");
+
+    const tckn = String(fd.get("tckn")).trim();
+    if (!isValidTckn(tckn))
+    {
+      toast("Geçerli TCKN girin. Örnek: 10000000001", true);
+      return;
+    }
+
+    const contactInformation = {
+      isim: String(fd.get("isim")).trim(),
+      soyisim: String(fd.get("soyisim")).trim(),
+      tckno: tckn,
+      telefon: String(fd.get("phone")).trim(),
+      adres: String(fd.get("adres")).trim(),
+      doğumTarihi: fd.get("birthDate")
+    };
+
+    const payload = {
+      email: fd.get("email"),
+      password: fd.get("password")
+    };
+
+    if (roleType === "RG" || roleType === "VZ")
+    {
+      payload.contactInformation = contactInformation;
+    }
+    else
+    {
+      payload.iletisimBilgisi = contactInformation;
+    }
+
+    if (roleType === "DR")
+    {
+      payload.bolum = fd.get("bolum");
+      payload.unvan = fd.get("unvan");
+    }
+
+    fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).then(async res => {
+      if (!res.ok)
+      {
+         let errMsg = "Personel kaydı başarısız";
+         try
+         {
+           const errData = await res.json();
+           errMsg = requestErrorMessage(errData, errMsg);
+         }
+         catch(e)
+         {
+         }
+         throw new Error(errMsg);
+      }
+      toast("Personel başarıyla kaydedildi! Şimdi giriş yapabilirsiniz.");
+      form.reset();
+    }).catch(err => {
+      toast("Hata: " + err.message, true);
+    });
     return;
   }
   if (kind === "register")
@@ -382,20 +511,28 @@ document.addEventListener("submit", function (e)
           tckno: tckn,
           telefon: fd.get("phone"),
           adres: fd.get("adres"),
-          dogumTarihi: fd.get("birthDate")
+          doğumTarihi: fd.get("birthDate")
         },
         boy: parseFloat(fd.get("boy")),
         kilo: parseFloat(fd.get("kilo")),
         email: fd.get("email"),
         password: fd.get("password")
       };
-      fetch("http://localhost:8080/api/kayit/hasta", {
+      fetch(apiUrl("/api/kayit/hasta"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
         credentials: "include"
-      }).then(res => {
-        if (!res.ok) throw new Error("Kayıt başarısız");
+      }).then(async res => {
+        if (!res.ok) {
+           let errMsg = "Kayıt başarısız";
+           try {
+             const errData = await res.json();
+             if (errData.message) errMsg = errData.message;
+             else if (errData.errors) errMsg = Object.values(errData.errors).join(", ");
+           } catch(e) {}
+           throw new Error(errMsg);
+        }
         return res.json();
       }).then(data => {
         toast("Hasta kaydedildi: " + payload.iletisimBilgisi.isim);
@@ -467,7 +604,7 @@ document.addEventListener("submit", function (e)
         doktorId: parseInt(parts[0]),
         randevuZamani: dateStr + "T" + parts[1] + ":00"
       };
-      fetch("http://localhost:8080/api/randevu-gorevlisi/randevu", {
+      fetch(apiUrl("/api/randevu-gorevlisi/randevu"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -504,7 +641,7 @@ document.addEventListener("submit", function (e)
     }
     const patientId = fd.get("patientId");
     if (!isTestMode()) {
-      fetch("http://localhost:8080/api/doktor/hasta/" + patientId + "/hastalik", {
+      fetch(apiUrl("/api/doktor/hasta/" + patientId + "/hastalik"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ detay: fd.get("note") }),
@@ -541,7 +678,7 @@ document.addEventListener("submit", function (e)
     }
     if (!isTestMode()) {
       const activePid = localStorage.getItem(MUAYENE_PID_KEY);
-      fetch("http://localhost:8080/api/doktor/randevu/" + activePid + "/tedavi", {
+      fetch(apiUrl("/api/doktor/randevu/" + activePid + "/tedavi"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tedaviTipi: "ILAC_TEDAVISI", aciklama: fd.get("name") + " - " + fd.get("dose") }),
@@ -579,7 +716,7 @@ document.addEventListener("submit", function (e)
     }
     if (!isTestMode()) {
       const activePid = localStorage.getItem(MUAYENE_PID_KEY);
-      fetch("http://localhost:8080/api/doktor/randevu/" + activePid + "/rapor", {
+      fetch(apiUrl("/api/doktor/randevu/" + activePid + "/rapor"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ icerik: fd.get("type") + ": " + fd.get("text") }),
@@ -629,3 +766,5 @@ document.addEventListener("submit", function (e)
 });
 
 }
+
+//--------------------------------------------------------------------------------------------------------------------------------

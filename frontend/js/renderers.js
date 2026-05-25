@@ -1,3 +1,7 @@
+//
+// Utkan Başurgan
+//
+//--------------------------------------------------------------------------------------------------------------------------------
 
 function renderSessionBar()
 {
@@ -169,13 +173,13 @@ async function renderRezervasyon()
   {
     return;
   }
-  const canBook = hasRole(session, ["RG", "patient"]);
+  const canBook = hasRole(session, ["RG"]);
   const pickDoctor = localStorage.getItem("rg-pick-doctor") || "";
   
   let doctors = store.doctors;
   if (!isTestMode() && hasRole(session, ["RG"])) {
     try {
-      const res = await fetch("http://localhost:8080/api/randevu-gorevlisi/doktorlar", { credentials: "include" });
+      const res = await fetch(apiUrl("/api/randevu-gorevlisi/doktorlar"), { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         doctors = data.map(d => ({
@@ -236,8 +240,9 @@ async function renderRezervasyon()
   {
     apptHtml = '<p class="empty">Randevu yok.</p>';
   }
+  const hintHtml = hasRole(session, ["patient"]) ? "" : roleHint(["RG"], session);
   el.innerHTML =
-    roleHint(["RG"], session) +
+    hintHtml +
     '<div class="panel"><h2>Randevu oluştur</h2>' +
     '<form class="form-grid two-col" data-form="appointment" id="appt-form">' +
     '<label class="field"><span>Hasta</span><select name="patientId" required' +
@@ -309,7 +314,7 @@ async function renderMuayene()
   if (activePid) {
     if (!isTestMode()) {
       try {
-        const res = await fetch("http://localhost:8080/api/doktor/randevu/" + activePid + "/hasta", { credentials: "include" });
+        const res = await fetch(apiUrl("/api/doktor/randevu/" + activePid + "/hasta"), { credentials: "include" });
         if (res.ok) {
           const apiData = await res.json();
           const contact = apiData.iletisimBilgisi || {};
@@ -338,7 +343,7 @@ async function renderMuayene()
   let queueHtml = "";
   if (!isTestMode()) {
     try {
-      const res = await fetch("http://localhost:8080/api/doktor/randevular", { credentials: "include" });
+      const res = await fetch(apiUrl("/api/doktor/randevular"), { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         data.forEach(r => {
@@ -534,50 +539,168 @@ function renderGiris()
   }
 }
 
-function updateNavigationVisibility() {
-  const session = getSession();
-  let role = null;
-  if (session) {
-    role = session.kind === 'patient' ? 'HASTA' : session.role;
+function canAccessPage(filename, session)
+{
+  const normalized = normalizePageFilename(filename);
+
+  if (normalized === "index.html" || normalized === "")
+  {
+    return true;
   }
 
-  const checkAccess = (href) => {
-    const filename = href.split('/').pop();
-    if (filename === 'index.html') return true;
-    if (filename === 'giris.html') return !session;
-    if (session) {
-      if (role === 'HASTA') return ['profil.html', 'muayene.html', 'rezervasyon.html', 'odeme.html'].includes(filename);
-      if (role === 'DR') return ['profil.html', 'doktor-panel.html', 'hasta-listesi.html', 'muayene.html'].includes(filename);
-      if (role === 'KG') return ['profil.html', 'kayit.html', 'hasta-listesi.html', 'personel-kayit.html'].includes(filename);
-      if (role === 'RG') return ['profil.html', 'rezervasyon.html', 'hasta-listesi.html', 'doktor-panel.html'].includes(filename);
-      if (role === 'VZ') return ['profil.html', 'odeme.html', 'hasta-listesi.html'].includes(filename);
-    }
+  if (normalized === "giris.html")
+  {
+    return !session;
+  }
+
+  if (!session)
+  {
     return false;
+  }
+
+  const role = session.kind === "patient" ? "HASTA" : session.role;
+  const accessMap = {
+    "HASTA": ["profil.html", "rezervasyon.html", "odeme.html"],
+    "DR": ["profil.html", "doktor-panel.html", "muayene.html"],
+    "KG": ["profil.html", "kayit.html", "hasta-listesi.html", "personel-kayit.html", "api-test.html"],
+    "RG": ["profil.html", "rezervasyon.html"],
+    "VZ": ["profil.html", "odeme.html"]
   };
 
-  const mainNav = document.querySelector('header.site-header nav.top-nav');
-  if (mainNav) {
+  return (accessMap[role] || []).indexOf(normalized) >= 0;
+}
+
+function normalizePageFilename(filename)
+{
+  if (!filename)
+  {
+    return "";
+  }
+
+  const clean = filename.split("?")[0].split("#")[0];
+  return clean.split("/").pop();
+}
+
+function pageToFilename(page)
+{
+  const pageMap = {
+    "index": "index.html",
+    "giris": "giris.html",
+    "kayit": "kayit.html",
+    "rezervasyon": "rezervasyon.html",
+    "muayene": "muayene.html",
+    "odeme": "odeme.html",
+    "profil": "profil.html",
+    "doktor-panel": "doktor-panel.html",
+    "hasta-listesi": "hasta-listesi.html",
+    "personel-kayit": "personel-kayit.html",
+    "api-test": "api-test.html"
+  };
+
+  return pageMap[page] || "";
+}
+
+function roleDisplayName(session)
+{
+  if (!session)
+  {
+    return "giriş yapmadan";
+  }
+
+  if (session.kind === "patient")
+  {
+    return "Hasta";
+  }
+
+  return session.roleLabel || session.role || "Personel";
+}
+
+function renderAccessDenied(page)
+{
+  renderSessionBar();
+
+  const target = document.getElementById("dummy-data") || document.getElementById("page-content");
+  const session = getSession();
+  const loginUrl = window.location.pathname.endsWith("/index.html") || window.location.pathname.endsWith("/")
+    ? "pages/giris.html"
+    : "giris.html";
+
+  if (!target)
+  {
+    return;
+  }
+
+  target.innerHTML =
+    '<div class="panel">' +
+    '<p class="empty">Bu sayfayı ' + esc(roleDisplayName(session)) + ' olarak görüntüleyemezsiniz.</p>' +
+    '<div class="btn-row">' +
+    (session ? "" : '<a href="' + loginUrl + '" class="btn btn-primary">Giriş yap</a>') +
+    '<a href="' + (window.location.pathname.endsWith("/index.html") || window.location.pathname.endsWith("/") ? "index.html" : "../index.html") + '" class="btn btn-secondary">Ana sayfa</a>' +
+    "</div></div>";
+}
+
+function canRenderCurrentPage(page)
+{
+  if (page === "giris")
+  {
+    return true;
+  }
+
+  const filename = pageToFilename(page);
+  const allowed = canAccessPage(filename, getSession());
+
+  if (!allowed)
+  {
+    renderAccessDenied(page);
+  }
+
+  return allowed;
+}
+
+function updateNavigationVisibility()
+{
+  const session = getSession();
+  const navs = document.querySelectorAll("nav.top-nav");
+  const apiTestLinks = document.querySelectorAll('#test-mode-banner a[href*="api-test.html"]');
+
+  navs.forEach(function (mainNav)
+  {
     const links = mainNav.querySelectorAll('a');
-    links.forEach(link => {
+    links.forEach(function (link)
+    {
       const href = link.getAttribute('href');
-      const hasAccess = checkAccess(href);
+      const filename = normalizePageFilename(href);
+      const hasAccess = canAccessPage(filename, session);
       
-      if (hasAccess) {
+      if (hasAccess)
+      {
         link.style.display = 'inline-block';
         link.style.opacity = '1';
         link.style.pointerEvents = 'auto';
         link.style.cursor = 'pointer';
-      } else {
+      }
+      else
+      {
         link.style.display = 'none';
       }
     });
-  }
+  });
+
+  apiTestLinks.forEach(function (link)
+  {
+    link.style.display = canAccessPage("api-test.html", session) ? "inline" : "none";
+  });
 }
 
 function refreshPage()
 {
   updateNavigationVisibility();
   const page = document.body.dataset.page;
+  if (!canRenderCurrentPage(page))
+  {
+    return;
+  }
+
   if (page === "index")
   {
     renderIndex().catch(console.error);
@@ -624,33 +747,196 @@ function refreshPage()
   }
 }
 
-async function renderProfil() {
+function normalizeDoctorProfile(data, session)
+{
+  if (!data)
+  {
+    return null;
+  }
+
+  const contact = data.iletisimBilgisi || data.contactInformation || {};
+  const firstName = data.isim || contact.isim || "";
+  const lastName = data.soyisim || contact.soyisim || "";
+  const fullName = [firstName, lastName].filter(Boolean).join(" ");
+
+  return {
+    id: data.id || data.personelId || data.staffId || "",
+    role: "DR",
+    roleLabel: "Doktor",
+    name: data.name || data.adSoyad || fullName || "",
+    email: data.email || (session ? session.email : ""),
+    department: data.department || data.bolum || "",
+    title: data.title || data.unvan || "",
+    phone: data.phone || data.telefon || contact.telefon || "",
+    tckn: data.tckn || data.tckno || contact.tckno || "",
+    birthDate: data.birthDate || data.dogumTarihi || data["doğumTarihi"] || contact.dogumTarihi || contact["doğumTarihi"] || "",
+    address: data.address || data.adres || contact.adres || ""
+  };
+}
+
+function pickDoctorProfile(doctors, session)
+{
+  if (!Array.isArray(doctors) || doctors.length === 0)
+  {
+    return null;
+  }
+
+  const sessionId = session ? (session.staffId || session.doctorId || session.id) : "";
+  const sessionEmail = session ? session.email : "";
+
+  if (sessionId)
+  {
+    const byId = doctors.find(function (doctor)
+    {
+      return String(doctor.id) === String(sessionId);
+    });
+
+    if (byId)
+    {
+      return byId;
+    }
+  }
+
+  if (sessionEmail)
+  {
+    const byEmail = doctors.find(function (doctor)
+    {
+      return doctor.email === sessionEmail;
+    });
+
+    if (byEmail)
+    {
+      return byEmail;
+    }
+  }
+
+  return doctors[0];
+}
+
+async function loadDoctorProfile(session, store)
+{
+  if (session.staffProfile)
+  {
+    const sessionProfile = normalizeDoctorProfile(session.staffProfile, session);
+
+    if (sessionProfile && (sessionProfile.name || sessionProfile.department || sessionProfile.title || sessionProfile.phone || sessionProfile.tckn))
+    {
+      return sessionProfile;
+    }
+  }
+
+  if (isTestMode())
+  {
+    if (store.staffProfiles && store.staffProfiles.DR)
+    {
+      return normalizeDoctorProfile(store.staffProfiles.DR, session);
+    }
+
+    return normalizeDoctorProfile(store.doctors[0], session);
+  }
+
+  const res = await fetch(apiUrl("/api/doktor"), { credentials: "include" });
+
+  if (!res.ok)
+  {
+    throw new Error("Doktor profili yüklenemedi.");
+  }
+
+  const data = await res.json();
+
+  if (Array.isArray(data))
+  {
+    return normalizeDoctorProfile(pickDoctorProfile(data, session), session);
+  }
+
+  return normalizeDoctorProfile(data, session);
+}
+
+function renderStaffProfileCard(session, profile, statusText)
+{
+  const roleLabel = (profile && profile.roleLabel) || session.roleLabel || "Personel";
+  const roleCode = (profile && profile.role) || session.role || "—";
+  const displayName = (profile && profile.name) || session.email || roleLabel;
+  const rows = [
+    ["Rol Kodu", roleCode],
+    ["Personel ID", profile && profile.id],
+    ["Ad Soyad", displayName],
+    ["Bölüm", profile && profile.department],
+    ["Unvan", profile && profile.title],
+    ["E-posta", profile && profile.email],
+    ["Telefon", profile && profile.phone],
+    ["TCKN", profile && profile.tckn],
+    ["Doğum Tarihi", profile && profile.birthDate],
+    ["Adres", profile && profile.address]
+  ];
+  let rowHtml = "";
+
+  rows.forEach(function (row)
+  {
+    if (row[1] === null || row[1] === undefined || row[1] === "")
+    {
+      return;
+    }
+
+    rowHtml +=
+      "<tr>" +
+      "<th>" + esc(row[0]) + "</th>" +
+      "<td>" + esc(row[1]) + "</td>" +
+      "</tr>";
+  });
+
+  return (
+    '<div class="panel"><h2>Personel Profili</h2>' +
+    '<div class="panel" style="background:var(--accent-light)">' +
+    "<h3>" + esc(roleLabel) + "</h3>" +
+    (statusText ? '<p class="hint">' + esc(statusText) + "</p>" : "") +
+    '<table class="data-table"><tbody>' + rowHtml + "</tbody></table>" +
+    "</div></div>"
+  );
+}
+
+async function renderProfil()
+{
   const session = getSession();
   const store = getStore();
   renderSessionBar();
   const el = document.getElementById("dummy-data");
-  if (!el) return;
+  if (!el)
+  {
+    return;
+  }
   
-  if (!session) {
+  if (!session)
+  {
     el.innerHTML = '<div class="panel"><p class="empty">Bu sayfayı görüntülemek için giriş yapmalısınız.</p></div>';
     return;
   }
 
-  if (session.kind === "staff") {
-    el.innerHTML = 
-      '<div class="panel"><h2>Personel Profili</h2>' +
-      '<div class="panel" style="background:var(--accent-light)">' +
-      '<h3>' + esc(session.roleLabel) + '</h3>' +
-      '<p><strong>Rol Kodu:</strong> ' + esc(session.role) + '</p>' +
-      '<p><em>Sistem Notu: Personel detaylı profil verileri backend API entegrasyonundan sonra aktif olacaktır.</em></p>' +
-      '</div></div>';
+  if (session.kind === "staff")
+  {
+    let profile = null;
+    let statusText = "";
+
+    if (session.role === "DR")
+    {
+      try
+      {
+        profile = await loadDoctorProfile(session, store);
+      }
+      catch (err)
+      {
+        statusText = "Doktor profil bilgileri API'den alınamadı. Oturum bilgileri gösteriliyor.";
+      }
+    }
+
+    el.innerHTML = renderStaffProfileCard(session, profile, statusText);
     return;
   }
 
   let p;
   if (!isTestMode()) {
     try {
-      const res = await fetch("http://localhost:8080/api/hasta/self", { credentials: "include" });
+      const res = await fetch(apiUrl("/api/hasta/self"), { credentials: "include" });
       if (res.ok) {
         const apiData = await res.json();
         const contact = apiData.iletisimBilgisi || {};
@@ -697,24 +983,34 @@ async function renderProfil() {
     renderPatientDossier(p) + '</div>';
 }
 
-async function renderDoktorPanel() {
+async function renderDoktorPanel()
+{
   const session = getSession();
   const store = getStore();
   renderSessionBar();
   const el = document.getElementById("dummy-data");
-  if (!el) return;
-  if (!hasRole(session, ["DR"])) {
+  if (!el)
+  {
+    return;
+  }
+  if (!hasRole(session, ["DR"]))
+  {
     el.innerHTML = '<div class="panel"><p class="empty">Bu sayfayı görüntülemek için Doktor (DR) olarak giriş yapmalısınız.</p></div>';
     return;
   }
   
   let queueHtml = "";
-  if (!isTestMode()) {
-    try {
-      const res = await fetch("http://localhost:8080/api/doktor/randevular", { credentials: "include" });
-      if (res.ok) {
+  let errMsg = null;
+  if (!isTestMode())
+  {
+    try
+    {
+      const res = await fetch(apiUrl("/api/doktor/randevular"), { credentials: "include" });
+      if (res.ok)
+      {
         const data = await res.json();
-        data.forEach(r => {
+        data.forEach(function (r)
+        {
            queueHtml +=
             '<div class="btn-row" style="margin-bottom:0.5rem">' +
             "<span><strong>" + esc((r.hastaIsim || "Bilinmiyor") + " " + (r.hastaSoyisim || "")) + "</strong> — " + esc(r.randevuZamani ? r.randevuZamani.replace("T", " ") : "") + "</span>" +
@@ -723,10 +1019,32 @@ async function renderDoktorPanel() {
             "</div>";
         });
       }
-    } catch(e) { console.error(e); }
-  } else {
+      else if (res.status === 401)
+      {
+        clearSession();
+        renderSessionBar();
+        errMsg = "Oturum doğrulanamadı. Test Mode kapalıyken gerçek doktor hesabıyla tekrar giriş yapın.";
+      }
+      else if (res.status === 500)
+      {
+        errMsg = "Doktor randevuları alınırken sunucu hata verdi. Doktor kaydını yeni enum değerleriyle yeniden oluşturup tekrar giriş yapın.";
+      }
+      else
+      {
+        errMsg = "Sunucu hatası: " + res.status;
+      }
+    }
+    catch(e)
+    {
+      console.error(e);
+      errMsg = "Bağlantı hatası.";
+    }
+  }
+  else
+  {
     const waiting = patientsWithConfirmedAppt(store);
-    waiting.forEach(function (p) {
+    waiting.forEach(function (p)
+    {
       queueHtml +=
         '<div class="btn-row" style="margin-bottom:0.5rem">' +
         "<span><strong>" + esc(p.name) + "</strong> — onaylı randevu</span>" +
@@ -736,8 +1054,22 @@ async function renderDoktorPanel() {
     });
   }
 
-  if (!queueHtml) queueHtml = '<p class="empty">Onaylı randevulu hasta yok.</p>';
-  el.innerHTML = '<div class="panel"><h2>Doktor Paneli - Bekleyen Hastalar</h2>' + queueHtml + '</div>';
+  if (errMsg)
+  {
+    el.innerHTML =
+      '<div class="panel"><h2>Doktor Paneli - Bekleyen Hastalar</h2>' +
+      '<p class="empty" style="color:red;">' + esc(errMsg) + "</p>" +
+      '<a href="giris.html" class="btn btn-primary">Giriş sayfasına git</a>' +
+      "</div>";
+  }
+  else
+  {
+    if (!queueHtml)
+    {
+      queueHtml = '<p class="empty">Onaylı randevulu hasta yok.</p>';
+    }
+    el.innerHTML = '<div class="panel"><h2>Doktor Paneli - Bekleyen Hastalar</h2>' + queueHtml + '</div>';
+  }
 }
 
 async function renderHastaListesi() {
@@ -751,9 +1083,10 @@ async function renderHastaListesi() {
     return;
   }
   let patients = store.patients;
+  let errMsg = null;
   if (!isTestMode()) {
     try {
-      const res = await fetch("http://localhost:8080/api/kayit/hastalar", { credentials: "include" });
+      const res = await fetch(apiUrl("/api/kayit/hastalar"), { credentials: "include" });
       if (res.ok) {
         const apiData = await res.json();
         patients = apiData.map(p => {
@@ -769,12 +1102,20 @@ async function renderHastaListesi() {
              })
            };
         });
+      } else {
+        errMsg = "Sunucu hatası: " + res.status;
       }
     } catch (e) {
       console.error(e);
+      errMsg = "Bağlantı hatası.";
     }
   }
-  el.innerHTML = '<div class="panel"><h2>Tüm Hastalar</h2><div id="patient-detail"></div>' + renderPatientsTableRows(patients, session) + '</div>';
+  
+  if (errMsg) {
+    el.innerHTML = '<div class="panel"><h2>Tüm Hastalar</h2><p class="empty" style="color:red;">' + errMsg + ' (Kayıt Görevlisi olarak giriş yaptığınıza emin olun)</p></div>';
+  } else {
+    el.innerHTML = '<div class="panel"><h2>Tüm Hastalar</h2><div id="patient-detail"></div>' + renderPatientsTableRows(patients, session) + '</div>';
+  }
 }
 
 async function renderPersonelKayit() {
@@ -782,7 +1123,55 @@ async function renderPersonelKayit() {
   renderSessionBar();
   const el = document.getElementById("dummy-data");
   if (!el) return;
-  el.innerHTML = '<div class="panel"><h2>Personel Kayıt</h2><p class="hint">API tarafı desteklenene kadar mock data üzerinden çalışmıyor. (Sadece UI stub)</p></div>';
+  
+  el.innerHTML =
+    '<div class="panel"><h2>Personel Kayıt (Backend API)</h2>' +
+    '<form class="form-grid two-col" data-form="register-staff">' +
+    '<label class="field"><span>Personel Tipi</span><select name="roleType" id="staff-role-select" required>' +
+    '<option value="KG">Kayıt Görevlisi</option>' +
+    '<option value="RG">Randevu Görevlisi</option>' +
+    '<option value="VZ">Veznedar</option>' +
+    '<option value="DR">Doktor</option>' +
+    '</select></label>' +
+    '<label class="field"><span>İsim</span><input name="isim" required></label>' +
+    '<label class="field"><span>Soyisim</span><input name="soyisim" required></label>' +
+    '<label class="field"><span>E-posta</span><input type="email" name="email" required></label>' +
+    '<label class="field"><span>Şifre</span><input type="password" name="password" required></label>' +
+    '<label class="field"><span>TCKN</span><input name="tckn" required maxlength="11" placeholder="10000000001"></label>' +
+    '<label class="field"><span>Doğum tarihi</span><input type="date" name="birthDate" required></label>' +
+    '<label class="field"><span>Telefon</span><input name="phone" required></label>' +
+    '<label class="field"><span>Adres</span><input name="adres" required></label>' +
+    
+    '<div id="dr-fields" style="display:none; grid-column: span 2;" class="form-grid two-col">' +
+      '<label class="field"><span>Bölüm</span><select name="bolum">' +
+      '<option value="CARDIOLOGY">Kardiyoloji</option>' +
+      '<option value="NEUROLOGY">Nöroloji</option>' +
+      '<option value="ORTHOPEDICS">Ortopedi</option>' +
+      '<option value="PEDIATRICS">Pediatri</option>' +
+      '<option value="DERMATOLOGY">Dermatoloji</option>' +
+      '</select></label>' +
+      '<label class="field"><span>Unvan</span><select name="unvan">' +
+      '<option value="INTERN">Stajyer</option>' +
+      '<option value="RESIDENT">Pratisyen</option>' +
+      '<option value="SPECIALIST" selected>Uzman</option>' +
+      '<option value="ASSOCIATE_PROFESSOR">Doçent</option>' +
+      '<option value="PROFESSOR">Profesör</option>' +
+      '</select></label>' +
+    '</div>' +
+    
+    '<div class="btn-row" style="grid-column: span 2; justify-content: flex-end;">' +
+    '<button type="submit" class="btn btn-primary">Personel Kaydet</button>' +
+    "</div></form></div>";
+    
+    setTimeout(() => {
+      const roleSel = document.getElementById("staff-role-select");
+      const drFields = document.getElementById("dr-fields");
+      if(roleSel && drFields) {
+         roleSel.addEventListener("change", e => {
+            drFields.style.display = e.target.value === "DR" ? "grid" : "none";
+         });
+      }
+    }, 100);
 }
 
 async function renderApiTest() {
@@ -790,43 +1179,43 @@ async function renderApiTest() {
   if (!el) return;
 
   const endpoints = [
-    { method: "GET", name: "Hasta Self", url: "http://localhost:8080/api/hasta/self", category: "Hasta İşlemleri" },
-    { method: "PUT", name: "Hasta Boy Güncelle", url: "http://localhost:8080/api/hasta/self/boy", category: "Hasta İşlemleri" },
-    { method: "PUT", name: "Hasta Kilo Güncelle", url: "http://localhost:8080/api/hasta/self/kilo", category: "Hasta İşlemleri" },
-    { method: "PUT", name: "Hasta İletişim Güncelle", url: "http://localhost:8080/api/hasta/self/iletisim", category: "Hasta İşlemleri" },
+    { method: "GET", name: "Hasta Self", url: apiUrl("/api/hasta/self"), category: "Hasta İşlemleri" },
+    { method: "PUT", name: "Hasta Boy Güncelle", url: apiUrl("/api/hasta/self/boy"), category: "Hasta İşlemleri" },
+    { method: "PUT", name: "Hasta Kilo Güncelle", url: apiUrl("/api/hasta/self/kilo"), category: "Hasta İşlemleri" },
+    { method: "PUT", name: "Hasta İletişim Güncelle", url: apiUrl("/api/hasta/self/iletisim"), category: "Hasta İşlemleri" },
     
-    { method: "GET", name: "Doktor Profil", url: "http://localhost:8080/api/doktor", category: "Doktor İşlemleri" },
-    { method: "POST", name: "Doktor Kayıt", url: "http://localhost:8080/api/doktor/register", category: "Doktor İşlemleri" },
-    { method: "GET", name: "Doktor Randevular", url: "http://localhost:8080/api/doktor/randevular", category: "Doktor İşlemleri" },
-    { method: "GET", name: "Randevu Hastası Getir", url: "http://localhost:8080/api/doktor/randevu/1/hasta", category: "Doktor İşlemleri" },
-    { method: "PUT", name: "Randevu Süresi Güncelle", url: "http://localhost:8080/api/doktor/randevu/1/sure", category: "Doktor İşlemleri" },
-    { method: "POST", name: "Tedavi Ekle", url: "http://localhost:8080/api/doktor/randevu/1/tedavi", category: "Doktor İşlemleri" },
-    { method: "DELETE", name: "Tedavi Sil", url: "http://localhost:8080/api/doktor/randevu/1/tedavi/1", category: "Doktor İşlemleri" },
-    { method: "POST", name: "Reçete Ekle", url: "http://localhost:8080/api/doktor/randevu/1/tedavi/1/recete", category: "Doktor İşlemleri" },
-    { method: "DELETE", name: "Reçete Sil", url: "http://localhost:8080/api/doktor/randevu/1/tedavi/1/recete/1", category: "Doktor İşlemleri" },
-    { method: "POST", name: "Rapor Ekle", url: "http://localhost:8080/api/doktor/randevu/1/rapor", category: "Doktor İşlemleri" },
-    { method: "DELETE", name: "Rapor Sil", url: "http://localhost:8080/api/doktor/randevu/1/rapor/1", category: "Doktor İşlemleri" },
-    { method: "PUT", name: "Hasta Boy (Doktor)", url: "http://localhost:8080/api/doktor/hasta/1/boy", category: "Doktor İşlemleri" },
-    { method: "PUT", name: "Hasta Kilo (Doktor)", url: "http://localhost:8080/api/doktor/hasta/1/kilo", category: "Doktor İşlemleri" },
-    { method: "POST", name: "Hastalık Ekle", url: "http://localhost:8080/api/doktor/hasta/1/hastalik", category: "Doktor İşlemleri" },
-    { method: "PUT", name: "Hastalık Güncelle", url: "http://localhost:8080/api/doktor/hasta/1/hastalik/1", category: "Doktor İşlemleri" },
-    { method: "DELETE", name: "Hastalık Sil", url: "http://localhost:8080/api/doktor/hasta/1/hastalik/1", category: "Doktor İşlemleri" },
+    { method: "GET", name: "Doktor Profil", url: apiUrl("/api/doktor"), category: "Doktor İşlemleri" },
+    { method: "POST", name: "Doktor Kayıt", url: apiUrl("/api/doktor/register"), category: "Doktor İşlemleri" },
+    { method: "GET", name: "Doktor Randevular", url: apiUrl("/api/doktor/randevular"), category: "Doktor İşlemleri" },
+    { method: "GET", name: "Randevu Hastası Getir", url: apiUrl("/api/doktor/randevu/1/hasta"), category: "Doktor İşlemleri" },
+    { method: "PUT", name: "Randevu Süresi Güncelle", url: apiUrl("/api/doktor/randevu/1/sure"), category: "Doktor İşlemleri" },
+    { method: "POST", name: "Tedavi Ekle", url: apiUrl("/api/doktor/randevu/1/tedavi"), category: "Doktor İşlemleri" },
+    { method: "DELETE", name: "Tedavi Sil", url: apiUrl("/api/doktor/randevu/1/tedavi/1"), category: "Doktor İşlemleri" },
+    { method: "POST", name: "Reçete Ekle", url: apiUrl("/api/doktor/randevu/1/tedavi/1/recete"), category: "Doktor İşlemleri" },
+    { method: "DELETE", name: "Reçete Sil", url: apiUrl("/api/doktor/randevu/1/tedavi/1/recete/1"), category: "Doktor İşlemleri" },
+    { method: "POST", name: "Rapor Ekle", url: apiUrl("/api/doktor/randevu/1/rapor"), category: "Doktor İşlemleri" },
+    { method: "DELETE", name: "Rapor Sil", url: apiUrl("/api/doktor/randevu/1/rapor/1"), category: "Doktor İşlemleri" },
+    { method: "PUT", name: "Hasta Boy (Doktor)", url: apiUrl("/api/doktor/hasta/1/boy"), category: "Doktor İşlemleri" },
+    { method: "PUT", name: "Hasta Kilo (Doktor)", url: apiUrl("/api/doktor/hasta/1/kilo"), category: "Doktor İşlemleri" },
+    { method: "POST", name: "Hastalık Ekle", url: apiUrl("/api/doktor/hasta/1/hastalik"), category: "Doktor İşlemleri" },
+    { method: "PUT", name: "Hastalık Güncelle", url: apiUrl("/api/doktor/hasta/1/hastalik/1"), category: "Doktor İşlemleri" },
+    { method: "DELETE", name: "Hastalık Sil", url: apiUrl("/api/doktor/hasta/1/hastalik/1"), category: "Doktor İşlemleri" },
     
-    { method: "POST", name: "KG Personel Kayıt", url: "http://localhost:8080/api/kayit/register", category: "Kayıt Görevlisi İşlemleri" },
-    { method: "POST", name: "Hasta Kayıt", url: "http://localhost:8080/api/kayit/hasta", category: "Kayıt Görevlisi İşlemleri" },
-    { method: "GET", name: "Hastaları Listele", url: "http://localhost:8080/api/kayit/hastalar", category: "Kayıt Görevlisi İşlemleri" },
+    { method: "POST", name: "KG Personel Kayıt", url: apiUrl("/api/kayit/register"), category: "Kayıt Görevlisi İşlemleri" },
+    { method: "POST", name: "Hasta Kayıt", url: apiUrl("/api/kayit/hasta"), category: "Kayıt Görevlisi İşlemleri" },
+    { method: "GET", name: "Hastaları Listele", url: apiUrl("/api/kayit/hastalar"), category: "Kayıt Görevlisi İşlemleri" },
     
-    { method: "POST", name: "RG Personel Kayıt", url: "http://localhost:8080/api/randevu-gorevlisi/register", category: "Randevu Görevlisi İşlemleri" },
-    { method: "GET", name: "Doktorları Listele", url: "http://localhost:8080/api/randevu-gorevlisi/doktorlar", category: "Randevu Görevlisi İşlemleri" },
-    { method: "POST", name: "Randevu Al", url: "http://localhost:8080/api/randevu-gorevlisi/randevu", category: "Randevu Görevlisi İşlemleri" },
-    { method: "DELETE", name: "Randevu İptal", url: "http://localhost:8080/api/randevu-gorevlisi/randevu/1", category: "Randevu Görevlisi İşlemleri" },
-    { method: "GET", name: "Alternatif Tarihler", url: "http://localhost:8080/api/randevu-gorevlisi/alternatif-tarihler", category: "Randevu Görevlisi İşlemleri" },
+    { method: "POST", name: "RG Personel Kayıt", url: apiUrl("/api/randevu-gorevlisi/register"), category: "Randevu Görevlisi İşlemleri" },
+    { method: "GET", name: "Doktorları Listele", url: apiUrl("/api/randevu-gorevlisi/doktorlar"), category: "Randevu Görevlisi İşlemleri" },
+    { method: "POST", name: "Randevu Al", url: apiUrl("/api/randevu-gorevlisi/randevu"), category: "Randevu Görevlisi İşlemleri" },
+    { method: "DELETE", name: "Randevu İptal", url: apiUrl("/api/randevu-gorevlisi/randevu/1"), category: "Randevu Görevlisi İşlemleri" },
+    { method: "GET", name: "Alternatif Tarihler", url: apiUrl("/api/randevu-gorevlisi/alternatif-tarihler"), category: "Randevu Görevlisi İşlemleri" },
     
-    { method: "POST", name: "VZ Personel Kayıt", url: "http://localhost:8080/api/veznedar/register", category: "Vezne İşlemleri" },
-    { method: "POST", name: "Ödeme Al", url: "http://localhost:8080/api/veznedar/randevu/1/odeme", category: "Vezne İşlemleri" },
+    { method: "POST", name: "VZ Personel Kayıt", url: apiUrl("/api/veznedar/register"), category: "Vezne İşlemleri" },
+    { method: "POST", name: "Ödeme Al", url: apiUrl("/api/veznedar/randevu/1/odeme"), category: "Vezne İşlemleri" },
     
-    { method: "POST", name: "Giriş Yap", url: "http://localhost:8080/api/auth/login", category: "Kimlik Doğrulama" },
-    { method: "POST", name: "Çıkış Yap", url: "http://localhost:8080/api/auth/logout", category: "Kimlik Doğrulama" }
+    { method: "POST", name: "Giriş Yap", url: apiUrl("/api/auth/login"), category: "Kimlik Doğrulama" },
+    { method: "POST", name: "Çıkış Yap", url: apiUrl("/api/auth/logout"), category: "Kimlik Doğrulama" }
   ];
 
   const categories = {};
@@ -862,7 +1251,7 @@ async function renderApiTest() {
     const ep = endpoints[i];
     const rowId = 'api-test-row-' + i;
     try {
-      const res = await fetch(ep.url, { method: ep.method, mode: 'cors' });
+      const res = await fetch(ep.url, { method: ep.method, mode: 'cors', credentials: 'include' });
       const row = document.getElementById(rowId);
       if (row) {
         if (res.ok) {
@@ -898,3 +1287,4 @@ function showPatientDetail(id)
   box.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
+//--------------------------------------------------------------------------------------------------------------------------------

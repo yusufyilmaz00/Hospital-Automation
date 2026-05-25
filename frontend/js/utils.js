@@ -1,3 +1,7 @@
+//
+// Utkan Başurgan
+//
+//--------------------------------------------------------------------------------------------------------------------------------
 
 function isTestMode() {
   return localStorage.getItem(TEST_MODE_KEY) !== "false"; // Default to true if null
@@ -14,6 +18,21 @@ function loadJson(path) {
     }
     return res.json();
   });
+}
+
+function apiBaseUrl()
+{
+  const host = window.location.hostname;
+  const apiHost = host && host !== "0.0.0.0"
+    ? host
+    : "localhost";
+
+  return "http://" + apiHost + ":8080";
+}
+
+function apiUrl(path)
+{
+  return apiBaseUrl() + path;
 }
 
 function esc(s) {
@@ -47,3 +66,5 @@ function todayStr() {
   const day = String(d.getDate()).padStart(2, "0");
   return d.getFullYear() + "-" + m + "-" + day;
 }
+
+//--------------------------------------------------------------------------------------------------------------------------------

@@ -1,21 +1,31 @@
-function injectSharedElements() {
-  const banner = document.createElement('div');
-  banner.id = 'test-mode-banner';
-  banner.style.cssText = 'background: #ffecb3; text-align: center; padding: 0.35rem; font-size: 0.85rem; border-bottom: 1px solid #ffd54f; display: flex; justify-content: center; gap: 1rem; align-items: center; width: 100%;';
+//
+// Utkan Başurgan
+//
+//--------------------------------------------------------------------------------------------------------------------------------
+
+function injectSharedElements()
+{
   const isRoot = window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/');
-  banner.innerHTML = `
+
+  if (!document.getElementById('test-mode-banner'))
+  {
+    const banner = document.createElement('div');
+    banner.id = 'test-mode-banner';
+    banner.style.cssText = 'background: #ffecb3; text-align: center; padding: 0.35rem; font-size: 0.85rem; border-bottom: 1px solid #ffd54f; display: flex; justify-content: center; gap: 1rem; align-items: center; width: 100%;';
+    banner.innerHTML = `
     <span style="color: #b45309;"><strong>Geliştirici Paneli</strong></span>
     <label for="test-mode-toggle" style="cursor: pointer; color: #b45309;">Test Mode</label>
     <input type="checkbox" id="test-mode-toggle" style="cursor: pointer;">
     <a href="${isRoot ? 'pages/' : ''}api-test.html" style="color: #b45309; font-weight: bold; margin-left: 1rem; text-decoration: underline;">API Test &rarr;</a>
   `;
-  document.body.insertBefore(banner, document.body.firstChild);
+    document.body.insertBefore(banner, document.body.firstChild);
+  }
 
   const header = document.querySelector('header.site-header');
-  if (header) {
+  if (header && !header.querySelector('nav.top-nav'))
+  {
     const nav = document.createElement('nav');
     nav.className = 'top-nav';
-    const isRoot = window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/');
     const prefixPage = isRoot ? 'pages/' : '';
     const prefixIndex = isRoot ? '' : '../';
     const pages = [
@@ -36,21 +46,23 @@ function injectSharedElements() {
       'index': 'index.html',
       'giris': 'giris.html',
       'profil': 'profil.html',
-      'doktor': 'doktor-panel.html',
-      'hastalar': 'hasta-listesi.html',
+      'doktor-panel': 'doktor-panel.html',
+      'hasta-listesi': 'hasta-listesi.html',
       'kayit': 'kayit.html',
-      'personel': 'personel-kayit.html',
+      'personel-kayit': 'personel-kayit.html',
       'rezervasyon': 'rezervasyon.html',
       'muayene': 'muayene.html',
       'odeme': 'odeme.html',
       'api-test': 'api-test.html'
     };
 
-    pages.forEach(p => {
+    pages.forEach(function (p)
+    {
       const a = document.createElement('a');
       a.href = p.url;
       a.textContent = p.label;
-      if (p.url.endsWith(pageMap[currentPage])) {
+      if (p.url.endsWith(pageMap[currentPage]))
+      {
         a.className = 'active';
       }
       nav.appendChild(a);
@@ -59,7 +71,8 @@ function injectSharedElements() {
   }
 
   const shell = document.querySelector('.shell');
-  if (shell) {
+  if (shell && !shell.querySelector('.site-footer'))
+  {
     const footer = document.createElement('footer');
     footer.className = 'site-footer';
     footer.style.cssText = 'margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); text-align: center;';
@@ -77,7 +90,16 @@ function injectSharedElements() {
         <a href="${isRoot ? 'pages/' : ''}odeme.html">Ödeme</a>
       </nav>
       <p style="margin-top: 1rem; color: var(--muted); font-size: 0.85rem;">BLM3722 - Yazılım Mühendisliği - Grup 2</p>
+      <div style="margin-top: 0.5rem; color: var(--muted); font-size: 0.80rem; line-height: 1.4;">
+        Ahmet Hakan Ergün - 22011034<br>
+        Oğuzhan Şen - 22011089<br>
+        Yusuf Yılmaz - 21011091<br>
+        Ensar Gök - 22011032<br>
+        Utkan Başurgan - 22011063
+      </div>
     `;
     shell.appendChild(footer);
   }
 }
+
+//--------------------------------------------------------------------------------------------------------------------------------
