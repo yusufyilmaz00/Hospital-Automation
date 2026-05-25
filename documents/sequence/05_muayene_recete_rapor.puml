@@ -1,0 +1,113 @@
+@startuml 05 - Muayene Recete ve Rapor Sequence
+
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontSize 12
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title UC: Muayene — «extend» Rapor / Reçete Verilmesi
+
+actor "Doktor" as DOC
+participant "DoktorController" as CTRL
+participant "SecurityContextUtil" as SEC
+participant "DoctorServiceImpl" as SVC
+participant "RandevuRepository" as RREP
+participant "TedaviRepository" as TREP
+participant "ReceteRepository" as CREP
+participant "RaporRepository" as RPREP
+participant "ReceteMapper" as CMAP
+participant "RaporMapper" as RPMAP
+
+== Reçete Ekleme ==
+
+DOC -> CTRL : POST /api/doktor/randevu/{randevuId}/tedavi/{tedaviId}/recete\nReceteRequestDTO {ilaclar: [...]}
+
+activate CTRL
+CTRL -> SEC : currentUser(Doktor.class) → doktorId
+activate SEC
+SEC --> CTRL : doktorId
+deactivate SEC
+
+CTRL -> SVC : addRecete(doktorId, randevuId, tedaviId, dto)
+activate SVC
+
+SVC -> RREP : findByIdAndDoktorId(randevuId, doktorId)
+activate RREP
+RREP --> SVC : Randevu
+deactivate RREP
+
+SVC -> SVC : odemeAlinmamisOlmali(randevu)
+
+SVC -> TREP : findByIdAndRandevuIdAndRandevuDoktorId\n(tedaviId, randevuId, doktorId)
+activate TREP
+TREP --> SVC : Tedavi
+deactivate TREP
+
+loop barkod benzersizlik garantisi
+  SVC -> SVC : barkod = UUID.randomUUID().toString()
+  SVC -> CREP : existsByBarkod(barkod)
+  activate CREP
+  CREP --> SVC : false (benzersiz)
+  deactivate CREP
+end
+
+note over SVC
+  new Recete(barkod, tedavi)
+  dto.ilaclar.forEach(recete::ilacEkle)
+end note
+
+SVC -> CREP : save(recete)
+activate CREP
+CREP --> SVC : Recete (id atandı)
+deactivate CREP
+
+SVC -> CMAP : toDTO(recete)
+activate CMAP
+CMAP --> SVC : ReceteDTO {id, barkod, ilaclar}
+deactivate CMAP
+
+SVC --> CTRL : ReceteDTO
+deactivate SVC
+CTRL --> DOC : 201 Created\nReceteDTO
+deactivate CTRL
+
+== Rapor Ekleme ==
+
+DOC -> CTRL : POST /api/doktor/randevu/{randevuId}/rapor\nRaporRequestDTO {icerik}
+
+activate CTRL
+CTRL -> SEC : currentUser(Doktor.class) → doktorId
+activate SEC
+SEC --> CTRL : doktorId
+deactivate SEC
+
+CTRL -> SVC : addRapor(doktorId, randevuId, dto)
+activate SVC
+
+SVC -> RREP : findByIdAndDoktorId(randevuId, doktorId)
+activate RREP
+RREP --> SVC : Randevu
+deactivate RREP
+
+SVC -> SVC : odemeAlinmamisOlmali(randevu)
+
+note over SVC
+  new Rapor(dto.icerik, randevu)
+end note
+
+SVC -> RPREP : save(rapor)
+activate RPREP
+RPREP --> SVC : Rapor (id atandı)
+deactivate RPREP
+
+SVC -> RPMAP : toDTO(rapor)
+activate RPMAP
+RPMAP --> SVC : RaporResponseDTO
+deactivate RPMAP
+
+SVC --> CTRL : RaporResponseDTO
+deactivate SVC
+CTRL --> DOC : 201 Created\nRaporResponseDTO
+deactivate CTRL
+
+@enduml

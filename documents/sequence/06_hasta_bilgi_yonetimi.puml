@@ -1,0 +1,109 @@
+@startuml 06 - Hasta Bilgilerinin Yonetimi Sequence
+
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontSize 12
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title UC: Muayene — «extend» Hasta Bilgilerinin Yönetimi
+
+actor "Doktor" as DOC
+participant "DoktorController" as CTRL
+participant "SecurityContextUtil" as SEC
+participant "DoctorServiceImpl" as DSVC
+participant "RandevuRepository" as RREP
+participant "HastaServiceImpl" as HSVC
+participant "HastaRepository" as HREP
+participant "HastalikRepository" as HLREP
+
+note over DOC, HREP
+  Yetki kontrolü: doktorun bu hastayla en az bir ortak randevusu
+  olmalı → randevuRepository.existsByHastaIdAndDoktorId(hastaId, doktorId)
+end note
+
+== Boy / Kilo Güncelleme ==
+
+DOC -> CTRL : PUT /api/doktor/hasta/{hastaId}/boy?boy=175.0
+
+activate CTRL
+CTRL -> SEC : currentUser(Doktor.class) → doktorId
+activate SEC
+SEC --> CTRL : doktorId
+deactivate SEC
+
+CTRL -> DSVC : updateHastaBoy(doktorId, hastaId, boy)
+activate DSVC
+
+DSVC -> RREP : existsByHastaIdAndDoktorId(hastaId, doktorId)
+activate RREP
+RREP --> DSVC : boolean
+deactivate RREP
+
+alt Yetki yok
+  DSVC --> CTRL : EntityNotFoundException
+  CTRL --> DOC : 404 / 403
+end
+
+DSVC -> HSVC : updateBoy(hastaId, boy)
+activate HSVC
+HSVC -> HREP : findById(hastaId)
+activate HREP
+HREP --> HSVC : Hasta
+deactivate HREP
+HSVC -> HSVC : hasta.setBoy(boy)
+HSVC -> HREP : save(hasta)
+activate HREP
+HREP --> HSVC : Hasta
+deactivate HREP
+HSVC --> DSVC : void
+deactivate HSVC
+
+DSVC --> CTRL : void
+deactivate DSVC
+CTRL --> DOC : 200 OK
+deactivate CTRL
+
+== Hastalık Ekleme ==
+
+DOC -> CTRL : POST /api/doktor/hasta/{hastaId}/hastalik\nHastalikRequestDTO {detay}
+
+activate CTRL
+CTRL -> SEC : currentUser(Doktor.class) → doktorId
+activate SEC
+SEC --> CTRL : doktorId
+deactivate SEC
+
+CTRL -> DSVC : addHastalik(doktorId, hastaId, detay)
+activate DSVC
+
+DSVC -> RREP : existsByHastaIdAndDoktorId(hastaId, doktorId)
+activate RREP
+RREP --> DSVC : true
+deactivate RREP
+
+DSVC -> HSVC : createHastalik(hastaId, detay)
+activate HSVC
+HSVC -> HREP : findById(hastaId)
+activate HREP
+HREP --> HSVC : Hasta
+deactivate HREP
+
+note over HSVC
+  new Hastalik(detay)
+  hastalik.setHasta(hasta)
+  hasta.hastaliklar.add(hastalik)
+end note
+
+HSVC -> HLREP : save(hastalik)
+activate HLREP
+HLREP --> HSVC : Hastalik
+deactivate HLREP
+HSVC --> DSVC : void
+deactivate HSVC
+
+DSVC --> CTRL : void
+deactivate DSVC
+CTRL --> DOC : 201 Created
+deactivate CTRL
+
+@enduml

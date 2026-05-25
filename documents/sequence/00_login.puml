@@ -1,0 +1,94 @@
+@startuml 00 - Sisteme Giris (Login) Sequence
+
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontSize 12
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title Sisteme Giriş — Tüm Use Case'lerin Önkoşulu
+
+actor "Kullanıcı\n(KG / Doktor / RG / Veznedar / Hasta)" as USR
+participant "AuthController" as CTRL
+participant "AuthService" as SVC
+participant "AuthUserService" as AUSVC
+participant "AuthUserRepository" as REPO
+participant "PasswordEncoder" as PE
+participant "SessionService" as SSVC
+participant "SessionRepository" as SREP
+
+USR -> CTRL : POST /api/auth/login\nAuthRequest {email, password}
+
+activate CTRL
+CTRL -> SVC : login(request)
+activate SVC
+
+loop Her UserType için (HASTA, DOKTOR, KG, RG, VEZNEDAR)
+  SVC -> AUSVC : getRepository(userType)
+  activate AUSVC
+  AUSVC --> SVC : AuthUserRepository<T>
+  deactivate AUSVC
+
+  SVC -> REPO : findByEmail(email)
+  activate REPO
+  REPO --> SVC : Optional<AuthUser>
+  deactivate REPO
+
+  alt Kullanıcı bulundu
+    SVC -> SVC : döngüden çık
+  end
+end
+
+alt Email bulunamadı
+  SVC -> PE : matches(password, dummyHash)\n[timing attack önlemi]
+  SVC --> CTRL : RuntimeException "Invalid credentials"
+  CTRL --> USR : 401 Unauthorized
+end
+
+SVC -> PE : matches(request.password, user.password)
+activate PE
+PE --> SVC : boolean
+deactivate PE
+
+alt Şifre yanlış
+  SVC --> CTRL : RuntimeException "Invalid credentials"
+  CTRL --> USR : 401 Unauthorized
+end
+
+SVC -> SSVC : createSession(user)
+activate SSVC
+
+note over SSVC
+  Session.builder()
+    .token(UUID.randomUUID())
+    .userId(user.id)
+    .userType(user.userType)
+    .createdAt(now)
+    .expiresAt(now + 7 gün)
+    .active(true)
+    .build()
+end note
+
+SSVC -> SREP : save(session)
+activate SREP
+SREP --> SSVC : Session
+deactivate SREP
+
+SSVC --> SVC : Session
+deactivate SSVC
+
+SVC --> CTRL : Session
+deactivate SVC
+
+note over CTRL
+  CookieUtil.addCookie(
+    response,
+    "SESSION_TOKEN",
+    session.token,
+    maxAge=7gün
+  )
+end note
+
+CTRL --> USR : 200 OK\nLoginResponseDTO {userType}\n[Set-Cookie: SESSION_TOKEN=...]
+deactivate CTRL
+
+@enduml

@@ -1,0 +1,69 @@
+@startuml 03 - Muayene Hasta Bilgileri Goruntuleme Sequence
+
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontSize 12
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title UC: Muayene — «include» Hasta Bilgilerinin Görüntülenmesi
+
+actor "Doktor" as DOC
+participant "SessionAuthFilter" as FILT
+participant "DoktorController" as CTRL
+participant "SecurityContextUtil" as SEC
+participant "DoctorServiceImpl" as SVC
+participant "RandevuRepository" as RREP
+participant "HastaMapper" as HMAP
+
+DOC -> FILT : GET /api/doktor/randevu/{randevuId}/hasta\n[Cookie: SESSION_TOKEN=...]
+
+activate FILT
+FILT -> FILT : CookieUtil.getCookie(request, "SESSION_TOKEN")
+FILT -> FILT : sessionService.getByToken(token)\nsessionService.isValid(session)
+FILT -> SEC : set(session.userId, session.userType)
+deactivate FILT
+
+FILT -> CTRL : isteği ilet
+activate CTRL
+
+CTRL -> SEC : currentUser(Doktor.class)
+activate SEC
+SEC --> CTRL : Optional<Long> doktorId
+deactivate SEC
+
+CTRL -> SVC : getHastaByRandevuId(doktorId, randevuId)
+activate SVC
+
+SVC -> RREP : findByIdAndDoktorId(randevuId, doktorId)
+activate RREP
+note right of RREP
+  Yetki kontrolü DB sorgusunda:
+  WHERE id = randevuId
+    AND doktor_id = doktorId
+end note
+RREP --> SVC : Optional<Randevu>
+deactivate RREP
+
+alt Randevu bulunamadı veya yetki yok
+  SVC --> CTRL : EntityNotFoundException
+  CTRL --> DOC : 403 / 404
+end
+
+SVC -> HMAP : toDTO(randevu.hasta)
+activate HMAP
+note right of HMAP
+  HastaResponseDTO:
+  iletişim, boy, kilo
+  hastalıklar, randevular
+  (her randevuda: tedaviler, reçeteler, raporlar)
+end note
+HMAP --> SVC : HastaResponseDTO
+deactivate HMAP
+
+SVC --> CTRL : HastaResponseDTO
+deactivate SVC
+
+CTRL --> DOC : 200 OK\nHastaResponseDTO
+deactivate CTRL
+
+@enduml

@@ -1,0 +1,111 @@
+@startuml 07 - Odeme Islemi Sequence
+
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontSize 12
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title UC: Ödeme İşleminin Yapılması\n«include» Sigorta Durumu Sorgulanması · «extend» İndirim Uygulanması
+
+actor "Veznedar" as VEZ
+participant "VeznedarController" as CTRL
+participant "SecurityContextUtil" as SEC
+participant "RandevuServiceImpl" as SVC
+participant "RandevuRepository" as RREP
+participant "SigortaService" as SIGT
+participant "RandevuOdemeMapper" as OMAP
+
+VEZ -> CTRL : POST /api/veznedar/randevu/{randevuId}/odeme
+
+activate CTRL
+CTRL -> SEC : currentUser(Veznedar.class)
+activate SEC
+SEC --> CTRL : Optional<Long> veznedarId
+deactivate SEC
+
+alt Oturum yok / yetki yok
+  CTRL --> VEZ : 403 Forbidden
+end
+
+CTRL -> SVC : ucretHesaplaVeOdemeAl(randevuId)
+activate SVC
+
+SVC -> RREP : findById(randevuId)
+activate RREP
+RREP --> SVC : Optional<Randevu>
+deactivate RREP
+
+alt Randevu bulunamadı
+  SVC --> CTRL : EntityNotFoundException
+  CTRL --> VEZ : 404 Not Found
+end
+
+alt randevu.odendi == true
+  SVC --> CTRL : IllegalArgumentException\n"Ödeme zaten alınmış"
+  CTRL --> VEZ : 400 Bad Request
+end
+
+note over SVC
+  brutUcret hesabı:
+  ─────────────────────────────
+  doktorSaatUcreti = unvan.hourlyRate
+  sureSaat = sureDakika / 60.0
+  muayeneUcreti = doktorSaatUcreti × sureSaat
+  tedaviUcreti = Σ switch(tedaviTipi):
+    AMELİYAT       → 5.000 ₺
+    İLAÇ_TEDAVİSİ →   750 ₺
+    FİZİK_TEDAVİ  → 1.500 ₺
+    SERVİS_YATIŞ  → 2.000 ₺
+  brutUcret = muayeneUcreti + tedaviUcreti
+end note
+
+SVC -> SVC : brutUcretHesapla(randevu)
+
+== «include» Sigorta Durumu Sorgulanması ==
+
+SVC -> SIGT : indirimOraniSorgula(hasta.iletisimBilgisi.tckno)
+activate SIGT
+note right of SIGT
+  Sosyal sigorta sunucusuna
+  TCKN gönderilir
+end note
+SIGT --> SVC : indirimOrani (0.0 – 1.0)
+deactivate SIGT
+
+== «extend» İndirim Uygulanması ==
+
+alt indirimOrani > 0
+  note over SVC
+    odenecekUcret =
+      brutUcret × (1 − indirimOrani)
+    [BigDecimal HALF_UP, 2 ondalık]
+  end note
+else
+  note over SVC
+    odenecekUcret = brutUcret
+  end note
+end
+
+note over SVC
+  randevu.sigortaIndirimOrani = indirimOrani
+  randevu.ucret = odenecekUcret
+  randevu.odendi = true
+end note
+
+SVC -> RREP : save(randevu)
+activate RREP
+RREP --> SVC : Randevu (odendi=true)
+deactivate RREP
+
+SVC -> OMAP : toDTO(randevu, brutUcret)
+activate OMAP
+OMAP --> SVC : RandevuOdemeDTO\n{randevuId, hastaAdi\nbrutUcret, indirimOrani\nodenecekUcret, odendi}
+deactivate OMAP
+
+SVC --> CTRL : RandevuOdemeDTO
+deactivate SVC
+
+CTRL --> VEZ : 200 OK\nRandevuOdemeDTO
+deactivate CTRL
+
+@enduml

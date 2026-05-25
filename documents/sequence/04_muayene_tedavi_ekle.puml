@@ -1,0 +1,70 @@
+@startuml 04 - Muayene Tedavi Ekleme Sequence
+
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontSize 12
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title UC: Muayene — «extend» Hasta Kaydına Tedavi Ekleme
+
+actor "Doktor" as DOC
+participant "DoktorController" as CTRL
+participant "SecurityContextUtil" as SEC
+participant "DoctorServiceImpl" as SVC
+participant "RandevuRepository" as RREP
+participant "TedaviRepository" as TREP
+participant "HastaTedaviMapper" as TMAP
+
+DOC -> CTRL : POST /api/doktor/randevu/{randevuId}/tedavi\nTedaviRequestDTO {tedaviTipi, aciklama}
+
+activate CTRL
+CTRL -> SEC : currentUser(Doktor.class)
+activate SEC
+SEC --> CTRL : Optional<Long> doktorId
+deactivate SEC
+
+CTRL -> SVC : addTedavi(doktorId, randevuId, dto)
+activate SVC
+
+SVC -> RREP : findByIdAndDoktorId(randevuId, doktorId)
+activate RREP
+RREP --> SVC : Optional<Randevu>
+deactivate RREP
+
+alt Randevu bulunamadı / yetki yok
+  SVC --> CTRL : EntityNotFoundException
+  CTRL --> DOC : 404 Not Found
+end
+
+SVC -> SVC : odemeAlinmamisOlmali(randevu)\n[randevu.odendi == true → hata]
+
+alt Ödeme alınmış
+  SVC --> CTRL : IllegalArgumentException\n"Ödemesi alınmış randevu güncellenemez"
+  CTRL --> DOC : 400 Bad Request
+end
+
+note over SVC
+  Tedavi.builder()
+    .tedaviTipi(dto.tedaviTipi)
+    .aciklama(dto.aciklama)
+    .randevu(randevu)
+    .build()
+end note
+
+SVC -> TREP : save(tedavi)
+activate TREP
+TREP --> SVC : Tedavi (id atandı)
+deactivate TREP
+
+SVC -> TMAP : toDTO(tedavi)
+activate TMAP
+TMAP --> SVC : HastaTedaviDTO
+deactivate TMAP
+
+SVC --> CTRL : HastaTedaviDTO
+deactivate SVC
+
+CTRL --> DOC : 201 Created\nHastaTedaviDTO
+deactivate CTRL
+
+@enduml

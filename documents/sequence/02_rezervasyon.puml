@@ -1,0 +1,99 @@
+@startuml 02 - Rezervasyon Alinmasi Sequence
+
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontSize 12
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title UC: Rezervasyon Alınması
+
+actor "Randevu Görevlisi" as RG
+participant "RandevuGorevlisiController" as CTRL
+participant "RandevuGorevlisiServiceImpl" as SVC
+participant "HastaServiceImpl" as HSVC
+participant "DoctorServiceImpl" as DSVC
+participant "HastaRepository" as HREP
+participant "DoctorRepository" as DREP
+participant "RandevuRepository" as RREP
+
+RG -> CTRL : POST /api/randevu-gorevlisi/randevu\nRandevuCreateRequestDTO\n(hastaId, doktorId, randevuZamani, sureDakika?)
+
+activate CTRL
+CTRL -> SVC : randevuIslemiYap(hastaId, doktorId, zaman, sure)
+activate SVC
+
+SVC -> HSVC : findById(hastaId)
+activate HSVC
+HSVC -> HREP : findById(hastaId)
+activate HREP
+HREP --> HSVC : Optional<Hasta>
+deactivate HREP
+HSVC --> SVC : Optional<Hasta>
+deactivate HSVC
+
+alt Hasta bulunamadı
+  SVC --> CTRL : EntityNotFoundException
+  CTRL --> RG : 404 Not Found
+end
+
+SVC -> DSVC : getDoctorById(doktorId)
+activate DSVC
+DSVC -> DREP : findById(doktorId)
+activate DREP
+DREP --> DSVC : Doktor
+deactivate DREP
+DSVC --> SVC : Doktor
+deactivate DSVC
+
+SVC -> DSVC : checkAvailability(doktorId, zaman)
+activate DSVC
+DSVC -> DREP : findById(doktorId)
+activate DREP
+DREP --> DSVC : Doktor (activeReservations)
+deactivate DREP
+note right of DSVC
+  Her randevu.randevuZamani
+  istenen zamanla karşılaştırılır
+end note
+DSVC --> SVC : boolean (true=müsait)
+deactivate DSVC
+
+alt Doktor müsait değil
+  SVC --> CTRL : IllegalArgumentException
+  CTRL --> RG : 400 Bad Request\n"Doktor bu saatte müsait değil"
+
+  note over RG, CTRL
+    Alternatif tarih akışı başlar:
+    GET /alternatif-tarih?haftaBaslangic=...
+    → tüm doktorların boş slotları döner
+  end note
+end
+
+SVC -> DSVC : addReservation(doktorId, zaman, hasta, sure)
+activate DSVC
+
+note over DSVC
+  Randevu.builder()
+    .randevuZamani(zaman)
+    .doktor(doktor)
+    .hasta(hasta)
+    .sureDakika(sure)
+    .odendi(false)
+    .build()
+end note
+
+DSVC -> RREP : save(randevu)
+activate RREP
+RREP --> DSVC : Randevu (id atandı)
+deactivate RREP
+
+DSVC --> SVC : Randevu
+deactivate DSVC
+
+SVC --> CTRL : Randevu
+deactivate SVC
+
+CTRL --> RG : 201 Created\nRandevuCreateResponseDTO
+deactivate CTRL
+
+@enduml

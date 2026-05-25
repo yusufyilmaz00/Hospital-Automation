@@ -1,0 +1,73 @@
+@startuml 01 - Hasta Kaydi Sequence
+
+skinparam sequenceArrowThickness 1.5
+skinparam participantFontSize 12
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title UC: Hasta Sisteme Kayıt Edilir
+
+actor "Kayıt Görevlisi" as KG
+participant "KayitGorevlisiController" as CTRL
+participant "HastaServiceImpl" as SVC
+participant "IletisimBilgisiMapper" as IMAP
+participant "HastalikMapper" as HMAP
+participant "PasswordEncoder" as PE
+participant "IletisimBilgisiRepository" as IREP
+participant "HastaRepository" as HREP
+
+KG -> CTRL : POST /api/kayit/hasta\nHastaRequestDTO
+
+activate CTRL
+CTRL -> SVC : create(dto)
+activate SVC
+
+SVC -> IMAP : toEntity(dto.iletisimBilgisi)
+activate IMAP
+IMAP --> SVC : IletisimBilgisi
+deactivate IMAP
+
+SVC -> PE : encode(dto.password)
+activate PE
+PE --> SVC : hashedPassword
+deactivate PE
+
+SVC -> IREP : save(iletisimBilgisi)
+activate IREP
+IREP --> SVC : IletisimBilgisi (id atandı)
+deactivate IREP
+
+note over SVC
+  Hasta.builder()
+    .email(dto.email)
+    .password(hashedPassword)
+    .iletisimBilgisi(iletisim)
+    .boy(dto.boy)
+    .kilo(dto.kilo)
+    .hastaliklar([...])
+    .build()
+end note
+
+alt dto.hastaliklar != null
+  loop her hastalık için
+    SVC -> SVC : new Hastalik(detay)\nhastalik.setHasta(hasta)
+  end
+end
+
+SVC -> HREP : save(hasta)
+activate HREP
+HREP --> SVC : Hasta (id atandı)
+deactivate HREP
+
+SVC -> HMAP : toDTO(hasta)
+activate HMAP
+HMAP --> SVC : HastaResponseDTO
+deactivate HMAP
+
+SVC --> CTRL : HastaResponseDTO
+deactivate SVC
+
+CTRL --> KG : 201 Created\nHastaResponseDTO
+deactivate CTRL
+
+@enduml
