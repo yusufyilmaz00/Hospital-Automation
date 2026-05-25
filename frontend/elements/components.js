@@ -38,7 +38,8 @@ function injectSharedElements()
       { url: prefixPage + 'personel-kayit.html', label: 'Personel Kayıt' },
       { url: prefixPage + 'rezervasyon.html', label: 'Rezervasyon' },
       { url: prefixPage + 'muayene.html', label: 'Muayene' },
-      { url: prefixPage + 'odeme.html', label: 'Ödeme' }
+      { url: prefixPage + 'odeme.html', label: 'Ödeme' },
+      { url: prefixPage + 'api-test.html', label: 'API Test' }
     ];
 
     const currentPage = document.body.dataset.page;
@@ -77,7 +78,7 @@ function injectSharedElements()
     footer.className = 'site-footer';
     footer.style.cssText = 'margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); text-align: center;';
     footer.innerHTML = `
-      <nav class="top-nav" style="justify-content: center; margin-top: 0; padding-top: 0; border-top: none;">
+      <nav class="top-nav bottom-nav" style="justify-content: center; margin-top: 0; padding-top: 0; border-top: none;">
         <a href="${isRoot ? '' : '../'}index.html">Ana sayfa</a>
         <a href="${isRoot ? 'pages/' : ''}giris.html">Giriş</a>
         <a href="${isRoot ? 'pages/' : ''}profil.html">Profil</a>
@@ -88,6 +89,7 @@ function injectSharedElements()
         <a href="${isRoot ? 'pages/' : ''}rezervasyon.html">Rezervasyon</a>
         <a href="${isRoot ? 'pages/' : ''}muayene.html">Muayene</a>
         <a href="${isRoot ? 'pages/' : ''}odeme.html">Ödeme</a>
+        <a href="${isRoot ? 'pages/' : ''}api-test.html">API Test</a>
       </nav>
       <p style="margin-top: 1rem; color: var(--muted); font-size: 0.85rem;">BLM3722 - Yazılım Mühendisliği - Grup 2</p>
       <div style="margin-top: 0.5rem; color: var(--muted); font-size: 0.80rem; line-height: 1.4;">

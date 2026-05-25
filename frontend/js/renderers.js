@@ -298,6 +298,135 @@ function renderPatientDossier(p)
   );
 }
 
+function splitAppointmentDateTime(value)
+{
+  const text = String(value || "").replace(" ", "T");
+  const parts = text.split("T");
+
+  return {
+    date: parts[0] || "",
+    time: parts[1] ? parts[1].substring(0, 5) : ""
+  };
+}
+
+function sortDoctorAppointmentRows(rows)
+{
+  return rows.sort(function (left, right)
+  {
+    const leftValue = String((left.date || "") + " " + (left.time || "")).trim();
+    const rightValue = String((right.date || "") + " " + (right.time || "")).trim();
+
+    return leftValue.localeCompare(rightValue, "tr");
+  });
+}
+
+function apiDoctorDisplayName(appointment)
+{
+  const doctor = appointment.doktor;
+
+  if (doctor && typeof doctor === "object")
+  {
+    return [doctor.unvan, doctor.isim, doctor.soyisim].filter(Boolean).join(" ") || "—";
+  }
+
+  return doctor || appointment.doktorIsim || "—";
+}
+
+function apiDoctorDepartment(appointment)
+{
+  const doctor = appointment.doktor;
+
+  if (doctor && typeof doctor === "object")
+  {
+    return doctor.bolum || "—";
+  }
+
+  return appointment.bolum || appointment.department || "—";
+}
+
+function buildDemoDoctorAppointmentRows(store)
+{
+  return confirmedAppointmentRows(store).map(function (row)
+  {
+    return {
+      examId: row.patient.id,
+      appointmentId: row.appointment.id,
+      patientName: row.patient.name,
+      doctorName: row.appointment.doctor || "—",
+      department: row.appointment.department || "—",
+      date: row.appointment.date || "",
+      time: row.appointment.time || "",
+      status: row.appointment.status || "onaylı"
+    };
+  });
+}
+
+function buildApiDoctorAppointmentRows(data)
+{
+  const activeAppointmentId = String(localStorage.getItem(MUAYENE_PID_KEY) || "");
+  const finishedAppointmentIds = getFinishedAppointmentIds();
+  const rows = [];
+
+  data.forEach(function (appointment)
+  {
+    const appointmentId = String(appointment.id || "");
+
+    if (appointmentId && (appointmentId === activeAppointmentId || finishedAppointmentIds.indexOf(appointmentId) >= 0))
+    {
+      return;
+    }
+
+    const dateTime = splitAppointmentDateTime(appointment.randevuZamani || appointment.tarih);
+    const patientName = ((appointment.hastaIsim || "Bilinmiyor") + " " + (appointment.hastaSoyisim || "")).trim();
+
+    rows.push({
+      examId: appointmentId,
+      appointmentId: appointmentId,
+      patientName: patientName,
+      doctorName: apiDoctorDisplayName(appointment),
+      department: apiDoctorDepartment(appointment),
+      date: dateTime.date,
+      time: dateTime.time,
+      status: appointment.status || "onaylı"
+    });
+  });
+
+  return sortDoctorAppointmentRows(rows);
+}
+
+function renderDoctorAppointmentsTable(rows, canExam)
+{
+  if (rows.length === 0)
+  {
+    return '<p class="empty">Onaylı randevulu hasta yok.</p>';
+  }
+
+  const body = rows.map(function (row)
+  {
+    const statusClass = row.status === "onaylı" ? "done" : "pending";
+
+    return (
+      "<tr>" +
+      "<td>" + esc(row.date || "—") + "</td>" +
+      "<td><strong>" + esc(row.time || "—") + "</strong></td>" +
+      "<td>" + esc(row.patientName || "Bilinmiyor") + "</td>" +
+      "<td>" + esc(row.doctorName || "—") + "</td>" +
+      "<td>" + esc(row.department || "—") + "</td>" +
+      '<td><span class="badge ' + statusClass + '">' + esc(row.status || "onaylı") + "</span></td>" +
+      '<td><button type="button" class="btn btn-primary btn-sm" data-action="open-muayene" data-id="' +
+      esc(row.examId) + '" data-aid="' + esc(row.appointmentId) + '"' +
+      (canExam ? "" : " disabled") + ">Muayeneye al</button></td>" +
+      "</tr>"
+    );
+  }).join("");
+
+  return (
+    '<table class="data-table"><thead><tr>' +
+    "<th>Tarih</th><th>Saat</th><th>Hasta</th><th>Doktor</th><th>Bölüm</th><th>Durum</th><th>İşlem</th>" +
+    "</tr></thead><tbody>" + body + "</tbody></table>"
+  );
+}
+
 async function renderMuayene()
 {
   const session = getSession();
@@ -340,36 +469,28 @@ async function renderMuayene()
     }
   }
 
-  let queueHtml = "";
-  if (!isTestMode()) {
-    try {
+  let queueRows = [];
+  if (!isTestMode())
+  {
+    try
+    {
       const res = await fetch(apiUrl("/api/doktor/randevular"), { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        data.forEach(r => {
-           queueHtml +=
-            '<div class="btn-row" style="margin-bottom:0.5rem">' +
-            "<span><strong>" + esc((r.hastaIsim || "Bilinmiyor") + " " + (r.hastaSoyisim || "")) + "</strong> — " + esc(r.randevuZamani ? r.randevuZamani.replace("T", " ") : "") + "</span>" +
-            '<button type="button" class="btn btn-primary btn-sm" data-action="open-muayene" data-id="' + esc(r.id) + '"' + (canExam ? "" : " disabled") + '>Muayeneye al</button>' +
-            "</div>";
-        });
+      if (res.ok)
+      {
+        queueRows = buildApiDoctorAppointmentRows(await res.json());
       }
-    } catch(e) { console.error(e); }
-  } else {
-    const waiting = patientsWithConfirmedAppt(store);
-    waiting.forEach(function (p) {
-      queueHtml +=
-        '<div class="btn-row" style="margin-bottom:0.5rem">' +
-        "<span><strong>" + esc(p.name) + "</strong> — onaylı randevu</span>" +
-        '<button type="button" class="btn btn-primary btn-sm" data-action="open-muayene" data-id="' + esc(p.id) + '"' + (canExam ? "" : " disabled") + ">Muayeneye al</button>" +
-        "</div>";
-    });
+    }
+    catch(e)
+    {
+      console.error(e);
+    }
+  }
+  else
+  {
+    queueRows = buildDemoDoctorAppointmentRows(store);
   }
 
-  if (!queueHtml)
-  {
-    queueHtml = '<p class="empty">Onaylı randevulu hasta yok.</p>';
-  }
+  const queueHtml = renderDoctorAppointmentsTable(queueRows, canExam);
   let workspace = "";
   if (active)
   {
@@ -660,7 +781,7 @@ function canRenderCurrentPage(page)
 function updateNavigationVisibility()
 {
   const session = getSession();
-  const navs = document.querySelectorAll("nav.top-nav");
+  const navs = document.querySelectorAll("header.site-header nav.top-nav");
   const apiTestLinks = document.querySelectorAll('#test-mode-banner a[href*="api-test.html"]');
 
   navs.forEach(function (mainNav)
@@ -999,7 +1120,7 @@ async function renderDoktorPanel()
     return;
   }
   
-  let queueHtml = "";
+  let queueRows = [];
   let errMsg = null;
   if (!isTestMode())
   {
@@ -1008,16 +1129,7 @@ async function renderDoktorPanel()
       const res = await fetch(apiUrl("/api/doktor/randevular"), { credentials: "include" });
       if (res.ok)
       {
-        const data = await res.json();
-        data.forEach(function (r)
-        {
-           queueHtml +=
-            '<div class="btn-row" style="margin-bottom:0.5rem">' +
-            "<span><strong>" + esc((r.hastaIsim || "Bilinmiyor") + " " + (r.hastaSoyisim || "")) + "</strong> — " + esc(r.randevuZamani ? r.randevuZamani.replace("T", " ") : "") + "</span>" +
-            '<button type="button" class="btn btn-primary btn-sm" data-action="open-muayene" data-id="' +
-            esc(r.id) + '">Muayeneye al</button>' +
-            "</div>";
-        });
+        queueRows = buildApiDoctorAppointmentRows(await res.json());
       }
       else if (res.status === 401)
       {
@@ -1042,16 +1154,7 @@ async function renderDoktorPanel()
   }
   else
   {
-    const waiting = patientsWithConfirmedAppt(store);
-    waiting.forEach(function (p)
-    {
-      queueHtml +=
-        '<div class="btn-row" style="margin-bottom:0.5rem">' +
-        "<span><strong>" + esc(p.name) + "</strong> — onaylı randevu</span>" +
-        '<button type="button" class="btn btn-primary btn-sm" data-action="open-muayene" data-id="' +
-        esc(p.id) + '">Muayeneye al</button>' +
-        "</div>";
-    });
+    queueRows = buildDemoDoctorAppointmentRows(store);
   }
 
   if (errMsg)
@@ -1064,11 +1167,8 @@ async function renderDoktorPanel()
   }
   else
   {
-    if (!queueHtml)
-    {
-      queueHtml = '<p class="empty">Onaylı randevulu hasta yok.</p>';
-    }
-    el.innerHTML = '<div class="panel"><h2>Doktor Paneli - Bekleyen Hastalar</h2>' + queueHtml + '</div>';
+    el.innerHTML = '<div class="panel"><h2>Doktor Paneli - Bekleyen Hastalar</h2>' +
+      renderDoctorAppointmentsTable(queueRows, true) + '</div>';
   }
 }
 

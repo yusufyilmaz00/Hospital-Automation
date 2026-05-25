@@ -34,7 +34,23 @@ function isValidTckn(tckn)
 
 function requestErrorMessage(data, fallback)
 {
-  if (data && data.errors)
+  if (!data)
+  {
+    return fallback;
+  }
+
+  if (data.validationErrors && Object.keys(data.validationErrors).length > 0)
+  {
+    return Object.keys(data.validationErrors).map(function (key)
+    {
+      const value = data.validationErrors[key];
+      const text = Array.isArray(value) ? value.join(", ") : value;
+
+      return key + ": " + text;
+    }).join(", ");
+  }
+
+  if (data.errors)
   {
     if (Array.isArray(data.errors))
     {
@@ -44,12 +60,361 @@ function requestErrorMessage(data, fallback)
     return Object.values(data.errors).join(", ");
   }
 
-  if (data && data.message)
+  if (data.message)
   {
     return data.message;
   }
 
+  if (data.detail)
+  {
+    return data.detail;
+  }
+
+  if (data.error)
+  {
+    return data.error;
+  }
+
+  if (data.title)
+  {
+    return data.title;
+  }
+
   return fallback;
+}
+
+async function throwRequestError(res, fallback)
+{
+  if (res.ok)
+  {
+    return;
+  }
+
+  let message = fallback;
+  if (!isTestMode() && (res.status === 401 || res.status === 403))
+  {
+    clearSession();
+    message = "Sunucu oturumu geçersiz veya bu işlem için yetkiniz yok. Lütfen API ile tekrar giriş yapın.";
+    throw new Error(message);
+  }
+
+  try
+  {
+    message = requestErrorMessage(await res.clone().json(), fallback);
+  }
+  catch(e)
+  {
+    try
+    {
+      const text = await res.text();
+      message = text || fallback;
+    }
+    catch(innerError)
+    {
+    }
+  }
+
+  if (!message || message === fallback)
+  {
+    message = fallback + " (HTTP " + res.status + ")";
+  }
+
+  throw new Error(message);
+}
+
+function setFormMessage(form, message, isError)
+{
+  let el = form.querySelector("[data-form-message]");
+
+  if (!message)
+  {
+    if (el)
+    {
+      el.remove();
+    }
+
+    return;
+  }
+
+  if (!el)
+  {
+    el = document.createElement("div");
+    el.dataset.formMessage = "true";
+    form.prepend(el);
+  }
+
+  el.textContent = message;
+  el.style.cssText =
+    "grid-column: 1 / -1; padding: 0.75rem 0.9rem; border-radius: 0.75rem; font-size: 0.92rem;";
+
+  if (isError)
+  {
+    el.style.cssText += " background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;";
+  }
+  else
+  {
+    el.style.cssText += " background: #ecfdf5; border: 1px solid #bbf7d0; color: #166534;";
+  }
+}
+
+function clearFormMessage(form)
+{
+  setFormMessage(form, "", false);
+}
+
+function failForm(form, message)
+{
+  const text = message || "İşlem başarısız.";
+  setFormMessage(form, text, true);
+  toast("Hata: " + text, true);
+}
+
+const TEST_FIRST_NAMES = ["Ayşe", "Can", "Elif", "Mert", "Selin", "Bora", "Derya", "Eren", "Funda", "Gökhan", "Hale", "Kemal", "Leyla", "Murat", "Nil", "Pelin"];
+const TEST_LAST_NAMES = ["Yılmaz", "Demir", "Arslan", "Şahin", "Korkmaz", "Çelik", "Aydın", "Yalçın", "Özkan", "Mutlu", "Kaplan", "Ergin", "Kaya", "Polat", "Işık", "Tan"];
+const TEST_STREETS = ["Atatürk Mahallesi", "Cumhuriyet Caddesi", "Sağlık Sokak", "Barış Bulvarı", "Güneş Apartmanı", "Çınar Sitesi"];
+const TEST_NOTES = ["Kontrol muayenesi yapıldı.", "Hasta takip planına alındı.", "Tetkik sonuçları değerlendirildi.", "Şikayetler azalmış, kontrol önerildi."];
+const TEST_TREATMENTS = ["Fizik tedavi", "Tansiyon takibi", "Diyet programı", "Vitamin desteği", "Ağrı kontrolü", "Göz damlası"];
+const TEST_DOSES = ["Günde 1 kez", "Günde 2 kez", "Sabah akşam", "10 gün", "2 hafta", "Kontrol amaçlı"];
+const TEST_SPECIALS = ["!", "@", "#", "$", "%", "&", "*"];
+
+function randomInt(min, max)
+{
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomItem(items)
+{
+  return items[randomInt(0, items.length - 1)];
+}
+
+function randomDigits(length)
+{
+  let value = "";
+
+  for (let i = 0; i < length; i++)
+  {
+    value += String(randomInt(0, 9));
+  }
+
+  return value;
+}
+
+function randomTckn()
+{
+  let firstTen = String(randomInt(1, 9)) + randomDigits(9);
+  const total = firstTen.split("").reduce(function (sum, digit)
+  {
+    return sum + Number(digit);
+  }, 0);
+
+  return firstTen + String(total % 10);
+}
+
+function randomEmail(firstName, lastName)
+{
+  return normalizeText(firstName + "." + lastName).toLowerCase() +
+    randomInt(100, 9999) + "@gmail.com";
+}
+
+function normalizeText(text)
+{
+  return String(text)
+    .replace(/ç/g, "c")
+    .replace(/Ç/g, "C")
+    .replace(/ğ/g, "g")
+    .replace(/Ğ/g, "G")
+    .replace(/ı/g, "i")
+    .replace(/I/g, "I")
+    .replace(/İ/g, "I")
+    .replace(/ö/g, "o")
+    .replace(/Ö/g, "O")
+    .replace(/ş/g, "s")
+    .replace(/Ş/g, "S")
+    .replace(/ü/g, "u")
+    .replace(/Ü/g, "U")
+    .replace(/[^A-Za-z0-9.]/g, "");
+}
+
+function randomPassword()
+{
+  return randomItem(["Test", "Hasta", "Personel", "Doktor"]) +
+    randomInt(1000, 9999) +
+    randomItem(TEST_SPECIALS) +
+    randomItem(["ab", "xy", "mn"]);
+}
+
+function randomBirthDate()
+{
+  return randomInt(1960, 2005) + "-" +
+    String(randomInt(1, 12)).padStart(2, "0") + "-" +
+    String(randomInt(1, 28)).padStart(2, "0");
+}
+
+function randomPhone()
+{
+  return "05" + randomInt(30, 55) + " " +
+    randomInt(100, 999) + " " +
+    randomInt(10, 99) + " " +
+    randomInt(10, 99);
+}
+
+function randomAddress()
+{
+  return randomItem(TEST_STREETS) + " No: " + randomInt(1, 120) + " Daire: " + randomInt(1, 24);
+}
+
+function randomProfile()
+{
+  const firstName = randomItem(TEST_FIRST_NAMES);
+  const lastName = randomItem(TEST_LAST_NAMES);
+
+  return {
+    firstName: firstName,
+    lastName: lastName,
+    email: randomEmail(firstName, lastName),
+    password: randomPassword(),
+    tckn: randomTckn(),
+    birthDate: randomBirthDate(),
+    phone: randomPhone(),
+    address: randomAddress(),
+    height: randomInt(145, 195),
+    weight: randomInt(45, 110)
+  };
+}
+
+function setFieldValue(form, name, value)
+{
+  const field = form.querySelector("[name=" + name + "]");
+
+  if (field && !field.disabled)
+  {
+    field.value = value;
+    field.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+}
+
+function pickRandomSelectValue(select)
+{
+  const options = Array.prototype.slice.call(select.options).filter(function (option)
+  {
+    return option.value !== "";
+  });
+
+  if (options.length > 0)
+  {
+    select.value = randomItem(options).value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+}
+
+function fillCommonProfileFields(form)
+{
+  const profile = randomProfile();
+
+  setFieldValue(form, "isim", profile.firstName);
+  setFieldValue(form, "soyisim", profile.lastName);
+  setFieldValue(form, "email", profile.email);
+  setFieldValue(form, "password", profile.password);
+  setFieldValue(form, "tckn", profile.tckn);
+  setFieldValue(form, "birthDate", profile.birthDate);
+  setFieldValue(form, "phone", profile.phone);
+  setFieldValue(form, "adres", profile.address);
+  setFieldValue(form, "boy", profile.height);
+  setFieldValue(form, "kilo", profile.weight);
+}
+
+function fillTestData(form)
+{
+  const kind = form.dataset.form;
+
+  clearFormMessage(form);
+  fillCommonProfileFields(form);
+
+  form.querySelectorAll("select").forEach(function (select)
+  {
+    if (!select.disabled)
+    {
+      pickRandomSelectValue(select);
+    }
+  });
+
+  if (kind === "login-staff")
+  {
+    setFieldValue(form, "pin", STAFF_PIN);
+  }
+  else if (kind === "login-patient")
+  {
+    const store = getStore();
+    const patient = randomItem(store.patients);
+    setFieldValue(form, "tckn", patient.tckn);
+  }
+  else if (kind === "login-backend")
+  {
+    const profile = randomProfile();
+    setFieldValue(form, "email", profile.email);
+    setFieldValue(form, "password", profile.password);
+  }
+  else if (kind === "record")
+  {
+    setFieldValue(form, "note", randomItem(TEST_NOTES));
+  }
+  else if (kind === "treatment")
+  {
+    setFieldValue(form, "name", randomItem(TEST_TREATMENTS));
+    setFieldValue(form, "dose", randomItem(TEST_DOSES));
+  }
+  else if (kind === "prescription")
+  {
+    setFieldValue(form, "text", randomItem(TEST_NOTES) + " " + randomItem(TEST_TREATMENTS) + " önerildi.");
+  }
+  else if (kind === "update-patient")
+  {
+    setFieldValue(form, "phone", randomPhone());
+  }
+
+  setFormMessage(form, "Test verisi forma yüklendi.", false);
+}
+
+function addTestDataButtons()
+{
+  document.querySelectorAll("form[data-form]").forEach(function (form)
+  {
+    if (form.dataset.testDataButton === "true")
+    {
+      return;
+    }
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-secondary";
+    button.dataset.action = "fill-test-data";
+    button.textContent = "Test Verisi Yükle";
+
+    const row = form.querySelector(".btn-row");
+    if (row)
+    {
+      row.insertBefore(button, row.firstChild);
+    }
+    else
+    {
+      button.style.gridColumn = "1 / -1";
+      form.appendChild(button);
+    }
+
+    form.dataset.testDataButton = "true";
+  });
+}
+
+function setupTestDataButtons()
+{
+  addTestDataButtons();
+
+  const observer = new MutationObserver(function ()
+  {
+    addTestDataButtons();
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
 }
 
 function setupEvents() {
@@ -61,6 +426,15 @@ document.addEventListener("click", function (e)
     return;
   }
   const action = btn.dataset.action;
+  if (action === "fill-test-data")
+  {
+    const form = btn.closest("form[data-form]");
+    if (form)
+    {
+      fillTestData(form);
+    }
+    return;
+  }
   if (action === "logout")
   {
     if (!isTestMode()) {
@@ -78,7 +452,7 @@ document.addEventListener("click", function (e)
   {
     const role = btn.dataset.role;
     const labels = { KG: "Kayıt Görevlisi", RG: "Randevu Görevlisi", DR: "Doktor", VZ: "Veznedar" };
-    setSession({ kind: "staff", role: role, roleLabel: labels[role] || role });
+    setSession({ kind: "staff", role: role, roleLabel: labels[role] || role, source: "demo" });
     toast(labels[role] + " olarak giriş yapıldı.");
     const pages = { KG: "kayit.html", RG: "rezervasyon.html", DR: "muayene.html", VZ: "odeme.html" };
     if (pages[role])
@@ -149,7 +523,39 @@ document.addEventListener("click", function (e)
   }
   if (action === "open-muayene")
   {
-    localStorage.setItem(MUAYENE_PID_KEY, btn.dataset.id);
+    const examId = btn.dataset.id;
+    const appointmentId = btn.dataset.aid || "";
+    const previousExamId = localStorage.getItem(MUAYENE_PID_KEY);
+    const previousAppointmentId = localStorage.getItem(MUAYENE_AID_KEY);
+
+    if (isTestMode())
+    {
+      const store = getStore();
+
+      if (previousExamId && (previousExamId !== examId || previousAppointmentId !== appointmentId))
+      {
+        updateAppointmentStatus(store, previousExamId, previousAppointmentId, "onaylı", "muayenede");
+      }
+
+      localStorage.setItem(MUAYENE_PID_KEY, examId);
+
+      const activeAppointmentId = updateAppointmentStatus(store, examId, appointmentId, "muayenede", "onaylı");
+
+      if (activeAppointmentId)
+      {
+        localStorage.setItem(MUAYENE_AID_KEY, activeAppointmentId);
+      }
+      else
+      {
+        localStorage.removeItem(MUAYENE_AID_KEY);
+      }
+    }
+    else
+    {
+      localStorage.setItem(MUAYENE_PID_KEY, examId);
+      localStorage.setItem(MUAYENE_AID_KEY, appointmentId || examId);
+    }
+
     if (document.body.dataset.page === "doktor-panel")
     {
       window.location.href = "muayene.html";
@@ -175,17 +581,48 @@ document.addEventListener("click", function (e)
   }
   if (action === "close-muayene")
   {
+    if (isTestMode())
+    {
+      const store = getStore();
+      const patientId = localStorage.getItem(MUAYENE_PID_KEY);
+      const appointmentId = localStorage.getItem(MUAYENE_AID_KEY);
+
+      if (patientId)
+      {
+        updateAppointmentStatus(store, patientId, appointmentId, "onaylı", "muayenede");
+      }
+    }
+
     localStorage.removeItem(MUAYENE_PID_KEY);
+    localStorage.removeItem(MUAYENE_AID_KEY);
     refreshPage();
     return;
   }
   if (action === "finish-muayene")
   {
+    if (!isTestMode())
+    {
+      const appointmentId = localStorage.getItem(MUAYENE_AID_KEY) ||
+        localStorage.getItem(MUAYENE_PID_KEY) ||
+        btn.dataset.id;
+
+      rememberFinishedAppointment(appointmentId);
+      localStorage.removeItem(MUAYENE_PID_KEY);
+      localStorage.removeItem(MUAYENE_AID_KEY);
+      toast("Muayene tamamlandı.");
+      refreshPage();
+      return;
+    }
+
     const store = getStore();
     const p = findPatient(store, btn.dataset.id);
     if (p && p.records && p.records.length > 0)
     {
+      const appointmentId = localStorage.getItem(MUAYENE_AID_KEY);
+
+      updateAppointmentStatus(store, btn.dataset.id, appointmentId, "tamamlandı", "muayenede");
       localStorage.removeItem(MUAYENE_PID_KEY);
+      localStorage.removeItem(MUAYENE_AID_KEY);
       toast("Muayene tamamlandı.");
       refreshPage();
     }
@@ -313,10 +750,24 @@ document.addEventListener("click", function (e)
   }
 });
 
-document.addEventListener("change", function(e) {
-  if (e.target.id === "test-mode-toggle") {
-    localStorage.setItem(TEST_MODE_KEY, e.target.checked);
-    toast("Test Mode " + (e.target.checked ? "ON" : "OFF"));
+document.addEventListener("change", function (e)
+{
+  if (e.target.id === "test-mode-toggle")
+  {
+    const currentSession = getSession();
+    const enabled = e.target.checked;
+    localStorage.setItem(TEST_MODE_KEY, enabled);
+
+    if (!enabled && currentSession && currentSession.source !== "api")
+    {
+      clearSession();
+      toast("Test Mode OFF. Demo oturumu kapatıldı.");
+    }
+    else
+    {
+      toast("Test Mode " + (enabled ? "ON" : "OFF"));
+    }
+
     refreshPage();
   }
 });
@@ -331,6 +782,7 @@ document.addEventListener("submit", function (e)
   e.preventDefault();
   const kind = form.dataset.form;
   const fd = new FormData(form);
+  clearFormMessage(form);
   if (kind === "login-backend")
   {
     const email = String(fd.get("email")).trim();
@@ -343,8 +795,8 @@ document.addEventListener("submit", function (e)
       },
       body: JSON.stringify({ email: email, password: password }),
       credentials: "include"
-    }).then(res => {
-      if (!res.ok) throw new Error("Giriş başarısız");
+    }).then(async res => {
+      await throwRequestError(res, "Giriş başarısız. Bilgileri kontrol edin.");
       return res.json();
     }).then(data => {
       const roleMap = {
@@ -365,7 +817,8 @@ document.addEventListener("submit", function (e)
       const sessionData = {
         kind: isPatient ? 'patient' : 'staff',
         role: role,
-        email: email
+        email: email,
+        source: "api"
       };
       if (isPatient)
       {
@@ -384,7 +837,7 @@ document.addEventListener("submit", function (e)
       toast("Giriş başarılı.");
       window.location.href = (window.location.pathname.endsWith("index.html") || window.location.pathname.endsWith("/")) ? "index.html" : "../index.html";
     }).catch(err => {
-      toast("Giriş başarısız. Bilgileri kontrol edin.", true);
+      failForm(form, err.message);
     });
     return;
   }
@@ -392,12 +845,12 @@ document.addEventListener("submit", function (e)
   {
     if (fd.get("pin") !== STAFF_PIN)
     {
-      toast("Hatalı şifre. Demo: 1234", true);
+      failForm(form, "Hatalı şifre. Demo: 1234");
       return;
     }
     const role = fd.get("role");
     const labels = { KG: "Kayıt Görevlisi", RG: "Randevu Görevlisi", DR: "Doktor", VZ: "Veznedar" };
-    setSession({ kind: "staff", role: role, roleLabel: labels[role] });
+    setSession({ kind: "staff", role: role, roleLabel: labels[role], source: "demo" });
     toast("Giriş başarılı.");
     window.location.href = (window.location.pathname.endsWith("index.html") || window.location.pathname.endsWith("/")) ? "index.html" : "../index.html";
     return;
@@ -412,18 +865,19 @@ document.addEventListener("submit", function (e)
     });
     if (!p)
     {
-      toast("Hasta bulunamadı.", true);
+      failForm(form, "Hasta bulunamadı.");
       return;
     }
-    setSession({ kind: "patient", patientId: p.id, name: p.name, tckn: p.tckn });
+    setSession({ kind: "patient", patientId: p.id, name: p.name, tckn: p.tckn, source: "demo" });
     toast("Hoş geldiniz, " + p.name);
     window.location.href = (window.location.pathname.endsWith("index.html") || window.location.pathname.endsWith("/")) ? "pages/profil.html" : "profil.html";
   }
   if (kind === "register-staff")
   {
     e.preventDefault();
-    if (isTestMode()) {
-       toast("Personel kaydı sadece API açıkken çalışır.", true);
+    if (isTestMode())
+    {
+       failForm(form, "Personel kaydı sadece API açıkken çalışır.");
        return;
     }
     const roleType = fd.get("roleType");
@@ -436,7 +890,7 @@ document.addEventListener("submit", function (e)
     const tckn = String(fd.get("tckn")).trim();
     if (!isValidTckn(tckn))
     {
-      toast("Geçerli TCKN girin. Örnek: 10000000001", true);
+      failForm(form, "Geçerli TCKN girin. Örnek: 10000000001");
       return;
     }
 
@@ -476,21 +930,13 @@ document.addEventListener("submit", function (e)
     }).then(async res => {
       if (!res.ok)
       {
-         let errMsg = "Personel kaydı başarısız";
-         try
-         {
-           const errData = await res.json();
-           errMsg = requestErrorMessage(errData, errMsg);
-         }
-         catch(e)
-         {
-         }
-         throw new Error(errMsg);
+         await throwRequestError(res, "Personel kaydı başarısız");
       }
       toast("Personel başarıyla kaydedildi! Şimdi giriş yapabilirsiniz.");
+      setFormMessage(form, "Personel başarıyla kaydedildi. Şimdi giriş yapabilirsiniz.", false);
       form.reset();
     }).catch(err => {
-      toast("Hata: " + err.message, true);
+      failForm(form, err.message);
     });
     return;
   }
@@ -499,11 +945,18 @@ document.addEventListener("submit", function (e)
     e.preventDefault();
     if (!hasRole(getSession(), ["KG"]))
     {
-      toast("Kayıt için KG olarak giriş yapın.", true);
+      failForm(form, "Kayıt için KG olarak giriş yapın.");
       return;
     }
     const tckn = String(fd.get("tckn")).trim();
-    if (!isTestMode()) {
+    if (!isValidTckn(tckn))
+    {
+      failForm(form, "Geçerli TCKN girin. Örnek: 10000000001");
+      return;
+    }
+
+    if (!isTestMode())
+    {
       const payload = {
         iletisimBilgisi: {
           isim: fd.get("isim"),
@@ -524,21 +977,17 @@ document.addEventListener("submit", function (e)
         body: JSON.stringify(payload),
         credentials: "include"
       }).then(async res => {
-        if (!res.ok) {
-           let errMsg = "Kayıt başarısız";
-           try {
-             const errData = await res.json();
-             if (errData.message) errMsg = errData.message;
-             else if (errData.errors) errMsg = Object.values(errData.errors).join(", ");
-           } catch(e) {}
-           throw new Error(errMsg);
+        if (!res.ok)
+        {
+           await throwRequestError(res, "Hasta kaydı başarısız");
         }
         return res.json();
       }).then(data => {
         toast("Hasta kaydedildi: " + payload.iletisimBilgisi.isim);
+        setFormMessage(form, "Hasta başarıyla kaydedildi.", false);
         refreshPage();
       }).catch(err => {
-        toast("Hata: " + err.message, true);
+        failForm(form, err.message);
       });
       return;
     }
@@ -548,7 +997,7 @@ document.addEventListener("submit", function (e)
       return x.tckn === tckn;
     }))
     {
-      toast("Bu TCKN zaten kayıtlı.", true);
+      failForm(form, "Bu TCKN zaten kayıtlı.");
       return;
     }
     const p = {
@@ -575,7 +1024,7 @@ document.addEventListener("submit", function (e)
     });
     saveStore(store);
     form.reset();
-    toast("Hasta kaydedildi: " + id);
+    toast("Hasta kaydedildi: " + p.id);
     refreshPage();
     return;
   }
@@ -584,18 +1033,19 @@ document.addEventListener("submit", function (e)
     e.preventDefault();
     if (!hasRole(getSession(), ["RG"]))
     {
-      toast("Randevu için RG olarak giriş yapın.", true);
+      failForm(form, "Randevu için RG olarak giriş yapın.");
       return;
     }
     const patientId = fd.get("patientId");
     const slotRaw = String(fd.get("slot"));
     if (!slotRaw || slotRaw.indexOf("|") < 0)
     {
-      toast("Slot yok — Doktoru kontrol et, alternatif tarih öner.", true);
+      failForm(form, "Slot yok — Doktoru kontrol et, alternatif tarih öner.");
       return;
     }
     const parts = slotRaw.split("|");
-    if (!isTestMode()) {
+    if (!isTestMode())
+    {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       const dateStr = tomorrow.toISOString().split('T')[0];
@@ -609,8 +1059,8 @@ document.addEventListener("submit", function (e)
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
         credentials: "include"
-      }).then(res => {
-        if (!res.ok) throw new Error("Müsait değil veya geçersiz tarih.");
+      }).then(async res => {
+        await throwRequestError(res, "Randevu oluşturulamadı.");
         return res.json();
       }).then(data => {
         form.reset();
@@ -618,7 +1068,7 @@ document.addEventListener("submit", function (e)
         toast("Randevu oluşturuldu.");
         refreshPage();
       }).catch(err => {
-        toast("Hata: " + err.message, true);
+        failForm(form, err.message);
       });
       return;
     }
@@ -636,27 +1086,32 @@ document.addEventListener("submit", function (e)
     e.preventDefault();
     if (!hasRole(getSession(), ["DR"]))
     {
-      toast("Muayene için DR olarak giriş yapın.", true);
+      failForm(form, "Muayene için DR olarak giriş yapın.");
       return;
     }
     const patientId = fd.get("patientId");
-    if (!isTestMode()) {
+    if (!isTestMode())
+    {
       fetch(apiUrl("/api/doktor/hasta/" + patientId + "/hastalik"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ detay: fd.get("note") }),
         credentials: "include"
-      }).then(res => {
-        if (!res.ok) throw new Error("Kayıt başarısız");
+      }).then(async res => {
+        await throwRequestError(res, "Muayene kaydı eklenemedi.");
         form.reset();
         toast("Muayene kaydı eklendi.");
         refreshPage();
-      }).catch(err => toast("Hata: " + err.message, true));
+      }).catch(err => failForm(form, err.message));
       return;
     }
     const store = getStore();
     const patient = findPatient(store, patientId);
-    if (!patient) return;
+    if (!patient)
+    {
+      failForm(form, "Hasta bulunamadı.");
+      return;
+    }
     if (!patient.records) patient.records = [];
     patient.records.push({
       date: todayStr(),
@@ -673,27 +1128,32 @@ document.addEventListener("submit", function (e)
     e.preventDefault();
     if (!hasRole(getSession(), ["DR"]))
     {
-      toast("DR olarak giriş yapın.", true);
+      failForm(form, "DR olarak giriş yapın.");
       return;
     }
-    if (!isTestMode()) {
+    if (!isTestMode())
+    {
       const activePid = localStorage.getItem(MUAYENE_PID_KEY);
       fetch(apiUrl("/api/doktor/randevu/" + activePid + "/tedavi"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tedaviTipi: "ILAC_TEDAVISI", aciklama: fd.get("name") + " - " + fd.get("dose") }),
         credentials: "include"
-      }).then(res => {
-        if (!res.ok) throw new Error("Tedavi eklenemedi");
+      }).then(async res => {
+        await throwRequestError(res, "Tedavi eklenemedi.");
         form.reset();
         toast("Tedavi eklendi.");
         refreshPage();
-      }).catch(err => toast("Hata: " + err.message, true));
+      }).catch(err => failForm(form, err.message));
       return;
     }
     const store = getStore();
     const patient = findPatient(store, fd.get("patientId"));
-    if (!patient) return;
+    if (!patient)
+    {
+      failForm(form, "Hasta bulunamadı.");
+      return;
+    }
     if (!patient.treatments) patient.treatments = [];
     patient.treatments.push({
       date: todayStr(),
@@ -711,27 +1171,32 @@ document.addEventListener("submit", function (e)
     e.preventDefault();
     if (!hasRole(getSession(), ["DR"]))
     {
-      toast("DR olarak giriş yapın.", true);
+      failForm(form, "DR olarak giriş yapın.");
       return;
     }
-    if (!isTestMode()) {
+    if (!isTestMode())
+    {
       const activePid = localStorage.getItem(MUAYENE_PID_KEY);
       fetch(apiUrl("/api/doktor/randevu/" + activePid + "/rapor"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ icerik: fd.get("type") + ": " + fd.get("text") }),
         credentials: "include"
-      }).then(res => {
-        if (!res.ok) throw new Error("Rapor eklenemedi");
+      }).then(async res => {
+        await throwRequestError(res, "Rapor eklenemedi.");
         form.reset();
         toast("Rapor eklendi.");
         refreshPage();
-      }).catch(err => toast("Hata: " + err.message, true));
+      }).catch(err => failForm(form, err.message));
       return;
     }
     const store = getStore();
     const patient = findPatient(store, fd.get("patientId"));
-    if (!patient) return;
+    if (!patient)
+    {
+      failForm(form, "Hasta bulunamadı.");
+      return;
+    }
     if (!patient.prescriptions) patient.prescriptions = [];
     patient.prescriptions.push({
       date: todayStr(),
@@ -748,13 +1213,14 @@ document.addEventListener("submit", function (e)
   {
     if (!hasRole(getSession(), ["DR"]))
     {
-      toast("DR olarak giriş yapın.", true);
+      failForm(form, "DR olarak giriş yapın.");
       return;
     }
     const store = getStore();
     const patient = findPatient(store, fd.get("patientId"));
     if (!patient)
     {
+      failForm(form, "Hasta bulunamadı.");
       return;
     }
     patient.phone = String(fd.get("phone")).trim();
@@ -764,6 +1230,8 @@ document.addEventListener("submit", function (e)
     refreshPage();
   }
 });
+
+setupTestDataButtons();
 
 }
 

@@ -105,6 +105,8 @@ function resetStore()
   localStorage.removeItem(STORE_KEY);
   localStorage.removeItem(STORE_META_KEY);
   localStorage.removeItem(MUAYENE_PID_KEY);
+  localStorage.removeItem(MUAYENE_AID_KEY);
+  localStorage.removeItem(MUAYENE_DONE_APPTS_KEY);
   getStore();
 }
 
@@ -147,6 +149,127 @@ function findPatient(store, id) {
   return store.patients.find(function (p) {
     return p.id === id;
   });
+}
+
+function compareAppointmentsByTime(left, right)
+{
+  const leftValue = String((left.date || "") + " " + (left.time || "")).trim();
+  const rightValue = String((right.date || "") + " " + (right.time || "")).trim();
+
+  return leftValue.localeCompare(rightValue, "tr");
+}
+
+function confirmedAppointmentRows(store)
+{
+  const rows = [];
+
+  store.patients.forEach(function (patient)
+  {
+    (patient.appointments || []).forEach(function (appointment)
+    {
+      if (appointment.status === "onaylı")
+      {
+        rows.push({
+          patient: patient,
+          appointment: appointment
+        });
+      }
+    });
+  });
+
+  rows.sort(function (left, right)
+  {
+    return compareAppointmentsByTime(left.appointment, right.appointment);
+  });
+
+  return rows;
+}
+
+function findPatientAppointment(patient, appointmentId)
+{
+  if (!patient || !appointmentId)
+  {
+    return null;
+  }
+
+  return (patient.appointments || []).find(function (appointment)
+  {
+    return String(appointment.id) === String(appointmentId);
+  }) || null;
+}
+
+function updateAppointmentStatus(store, patientId, appointmentId, nextStatus, fallbackStatus)
+{
+  const patient = findPatient(store, patientId);
+  let appointment = findPatientAppointment(patient, appointmentId);
+
+  if (!appointment && patient && fallbackStatus)
+  {
+    appointment = (patient.appointments || []).filter(function (item)
+    {
+      return item.status === fallbackStatus;
+    }).sort(compareAppointmentsByTime)[0] || null;
+  }
+
+  if (!appointment && patient)
+  {
+    appointment = (patient.appointments || []).filter(function (item)
+    {
+      return item.status === "onaylı";
+    }).sort(compareAppointmentsByTime)[0] || null;
+  }
+
+  if (!appointment)
+  {
+    return "";
+  }
+
+  appointment.status = nextStatus;
+  saveStore(store);
+
+  return appointment.id;
+}
+
+function getFinishedAppointmentIds()
+{
+  const raw = localStorage.getItem(MUAYENE_DONE_APPTS_KEY);
+
+  if (!raw)
+  {
+    return [];
+  }
+
+  try
+  {
+    const ids = JSON.parse(raw);
+
+    if (Array.isArray(ids))
+    {
+      return ids.map(String);
+    }
+  }
+  catch(e)
+  {
+  }
+
+  return [];
+}
+
+function rememberFinishedAppointment(appointmentId)
+{
+  if (!appointmentId)
+  {
+    return;
+  }
+
+  const ids = getFinishedAppointmentIds();
+  const value = String(appointmentId);
+
+  if (ids.indexOf(value) < 0)
+  {
+    ids.push(value);
+    localStorage.setItem(MUAYENE_DONE_APPTS_KEY, JSON.stringify(ids));
+  }
 }
 
 function patientsWithConfirmedAppt(store) {
