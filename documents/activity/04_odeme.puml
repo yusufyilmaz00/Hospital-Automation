@@ -1,0 +1,78 @@
+@startuml 04 - Odeme Sureci Aktivite Diyagrami
+
+skinparam activityFontSize 13
+skinparam activityArrowFontSize 11
+skinparam activityBackgroundColor #FDFEFE
+skinparam activityBorderColor #555555
+skinparam partitionBackgroundColor #F4F6F7
+skinparam ArrowColor #333333
+skinparam noteBackgroundColor #FFFDE7
+
+title Ödeme Süreci Aktivite Diyagramı
+
+|Veznedar|
+start
+
+:Sisteme giriş yapar\n(POST /api/auth/login);
+
+:Randevu ID girer\n(POST /api/veznedar/randevu/{id}/odeme);
+
+|Sistem|
+
+:Randevuyu veritabanından getirir\n(RandevuRepository.findById);
+
+if (Randevu bulunamadı?) then (evet)
+  :404 EntityNotFoundException\n"Randevu bulunamadı";
+  |Veznedar|
+  :ID'yi kontrol eder;
+  stop
+endif
+
+if (randevu.odendi == true?) then (evet)
+  :400 IllegalArgumentException\n"Bu randevunun ödemesi\nzaten alınmış";
+  |Veznedar|
+  stop
+endif
+
+:Hastanın TCKN bilgisini alır\n(randevu.hasta.iletisimBilgisi.tckno);
+
+|Sigorta Servisi|
+
+:Sigorta indirim oranını sorgular\n(SigortaService.indirimOraniSorgula(tckno));
+
+:indirimOrani döner\n(0.0 → 1.0 arası);
+
+|Sistem|
+
+:Doktor muayene ücretini hesaplar\n──────────────────────────\nmuayeneUcreti =\n  (sureDakika / 60) × doktor.hourlyRate\n──────────────────────────\nUnvan → saatlik ücret:\n  INTERN:             50  ₺/saat\n  RESIDENT:           75  ₺/saat\n  SPECIALIST:        100  ₺/saat\n  ASSOCIATE_PROFESSOR: 150 ₺/saat\n  PROFESSOR:         200  ₺/saat;
+
+:Tedavi ücretlerini toplar\n(Σ tedaviUcreti)\n──────────────────────────\nAMELİYAT:       5.000 ₺\nİLAÇ_TEDAVİSİ:    750 ₺\nFİZİK_TEDAVİ:   1.500 ₺\nSERVİS_YATIŞ:   2.000 ₺;
+
+:Brüt ücreti hesaplar\n──────────────────────────\nbrutUcret =\n  muayeneUcreti + Σ tedaviUcreti\n(yuvarla 2 ondalık - HALF_UP);
+
+if (indirimOrani > 0?) then (evet)
+  :Sigorta indirimi uygular\n──────────────────────────\nodenecekUcret =\n  brutUcret × (1 − indirimOrani)\n(yuvarla 2 ondalık - HALF_UP);
+else (hayır)
+  :odenecekUcret = brutUcret;
+endif
+
+:Randevu güncellenir\n──────────────────────────\nrandevu.sigortaIndirimOrani = indirimOrani\nrandevu.ucret = odenecekUcret\nrandevu.odendi = true;
+
+:Randevu kaydedilir\n(RandevuRepository.save);
+
+:200 OK\nRandevuOdemeDTO döner\n──────────────────────────\nrandevuId, hasta adı\nbrütÜcret, indirimOrani\nödenecekÜcret, odendi;
+
+|Veznedar|
+:Ödeme bilgilerini görür\nMakbuzu hazırlar;
+
+stop
+
+note right
+  Ödeme alındıktan sonra:
+  - randevu.odendi = true
+  - Doktor sureDakika ve tedavi
+    güncellemesi yapAMAZ
+  - Tekrar ödeme isteği → 400 hatası
+end note
+
+@enduml

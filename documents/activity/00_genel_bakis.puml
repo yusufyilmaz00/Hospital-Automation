@@ -1,0 +1,77 @@
+@startuml 00 - Genel Bakis Aktivite Diyagrami
+
+skinparam activityFontSize 12
+skinparam activityArrowFontSize 10
+skinparam activityBackgroundColor #FDFEFE
+skinparam activityBorderColor #555555
+skinparam partitionBackgroundColor #F4F6F7
+skinparam ArrowColor #333333
+skinparam noteBackgroundColor #FFFDE7
+
+title Hastane Otomasyon Sistemi — Genel Aktivite Akışı
+
+|Kayıt Görevlisi|
+start
+
+:Hasta bilgilerini girer;
+
+|Sistem|
+:TCKN ve email doğrulama;
+:Hasta kaydedilir;
+
+|Randevu Görevlisi|
+:Doktor listesini görüntüler;
+:Doktor ve tarih seçer;
+
+|Sistem|
+:Doktor müsaitliği kontrol edilir;
+
+if (Doktor müsait mi?) then (hayır)
+  |Sistem|
+  :Alternatif tarih listesi\nhesaplanır;
+  |Randevu Görevlisi|
+  :Alternatif tarih seçer;
+  |Sistem|
+else (evet)
+endif
+
+:Randevu oluşturulur\n(odendi = false);
+
+|Doktor|
+:Randevuyu açar\nHasta kaydını görüntüler;
+
+fork
+  :Hasta ölçümlerini günceller\n(boy / kilo);
+fork again
+  :Hastalık bilgilerini yönetir;
+end fork
+
+:Tedavi ekler\n(AMELİYAT / İLAÇ / FİZİK / SERVİS);
+
+if (Reçete gerekli mi?) then (evet)
+  :Reçete yazar\n(barkod otomatik üretilir);
+endif
+
+if (Rapor gerekli mi?) then (evet)
+  :Rapor yazar;
+endif
+
+:Muayene süresini kaydeder;
+
+|Veznedar|
+:Randevu ID ile ödeme başlatır;
+
+|Sigorta Servisi|
+:TCKN ile indirim oranı\nsorgulanır;
+
+|Sistem|
+:Brüt ücret hesaplanır\n(muayene + tedaviler);
+:Sigorta indirimi uygulanır;
+:Randevu ödendi = true işaretlenir;
+
+|Veznedar|
+:Ödeme bilgilerini görür;
+
+stop
+
+@enduml

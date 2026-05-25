@@ -1,0 +1,67 @@
+@startuml 01 - Hasta Kaydi Aktivite Diyagrami
+
+skinparam activityFontSize 13
+skinparam activityArrowFontSize 11
+skinparam activityBackgroundColor #FDFEFE
+skinparam activityBorderColor #555555
+skinparam partitionBackgroundColor #F4F6F7
+skinparam ArrowColor #333333
+skinparam noteBackgroundColor #FFFDE7
+
+title Hasta Kaydı Aktivite Diyagramı
+
+|Kayıt Görevlisi|
+start
+
+:Sisteme giriş yapar\n(POST /api/auth/login);
+
+:Hasta bilgi formunu doldurur\n─────────────────────\nemail, şifre\niletişim: isim, soyisim, TCKN\ntelefon, adres, doğum tarihi\nboy, kilo\n(isteğe bağlı: hastalık listesi);
+
+|Sistem|
+
+:TCKN formatını doğrular\n(@ValidTckn);
+
+if (TCKN geçerli mi?) then (hayır)
+  :400 Bad Request\nValidation hatası döner;
+  |Kayıt Görevlisi|
+  :Formu düzeltir;
+  |Sistem|
+  :TCKN formatını doğrular\n(@ValidTckn);
+endif
+
+:Email benzersizlik kontrolü\n(hasta tablosunda unique constraint);
+
+if (Email kayıtlı mı?) then (evet)
+  :409 Conflict\n"Email zaten kayıtlı" döner;
+  |Kayıt Görevlisi|
+  :Farklı email girer;
+  |Sistem|
+endif
+
+:Şifre hash'lenir\n(BCrypt PasswordEncoder);
+
+:IletisimBilgisi entity\noluşturulur ve kaydedilir;
+
+:Hasta entity oluşturulur\n─────────────────────\nHasta.builder()\n  .email(...)\n  .password(encoded)\n  .iletisimBilgisi(...)\n  .boy(...) .kilo(...)\n  .hastaliklar([...])\n  .build();
+
+if (Hastalık listesi var mı?) then (evet)
+  :Her hastalık için\nHastalik nesnesi oluşturulur\nve hasta ile ilişkilendirilir;
+endif
+
+:Hasta veritabanına kaydedilir\n(HastaRepository.save());
+
+:201 Created\nHastaResponseDTO döner;
+
+|Kayıt Görevlisi|
+
+:Başarı mesajını görür\nHasta sisteme kayıtlı;
+
+stop
+
+note right
+  Hasta bu aşamadan sonra
+  /api/auth/login ile sisteme
+  giriş yapabilir.
+end note
+
+@enduml

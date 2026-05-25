@@ -1,0 +1,111 @@
+@startuml 03 - Muayene Sureci Aktivite Diyagrami
+
+skinparam activityFontSize 13
+skinparam activityArrowFontSize 11
+skinparam activityBackgroundColor #FDFEFE
+skinparam activityBorderColor #555555
+skinparam partitionBackgroundColor #F4F6F7
+skinparam ArrowColor #333333
+skinparam noteBackgroundColor #FFFDE7
+
+title Muayene Süreci Aktivite Diyagramı
+
+|Doktor|
+start
+
+:Sisteme giriş yapar\n(POST /api/auth/login);
+
+:Kendi randevularını görüntüler\n(GET /api/doktor/randevular)\n────────────────────────────\nHasta adı, tarih, randevu ID;
+
+:Randevuyu seçer;
+
+:Hastanın tam kaydını görüntüler\n(GET /api/doktor/randevu/{id}/hasta)\n────────────────────────────\niletişim, boy, kilo\nhastalıklar, önceki randevular\ntedaviler, reçeteler, raporlar;
+
+|Sistem|
+:Doktorun bu randevuya\nerişim yetkisi kontrol edilir\n(randevu.doktor.id == currentUser);
+
+if (Yetkisiz erişim?) then (evet)
+  :403 Forbidden döner;
+  stop
+endif
+
+:HastaResponseDTO döner;
+
+|Doktor|
+
+fork
+  :Hasta ölçümlerini günceller\n──────────────────────\nBoy: PUT /hasta/{id}/boy\nKilo: PUT /hasta/{id}/kilo;
+  |Sistem|
+  :Hasta.boy / kilo güncellenir;
+  |Doktor|
+fork again
+  :Hastalık bilgilerini yönetir\n──────────────────────\nEkle: POST /hasta/{id}/hastalik\nGüncelle: PUT /hasta/{id}/hastalik/{hid}\nSil: DELETE /hasta/{id}/hastalik/{hid};
+  |Sistem|
+  :Hastalik eklenir/güncellenir/silinir;
+  |Doktor|
+end fork
+
+:Tedavi eklemek istiyor mu?;
+
+while (Tedavi eklenecek?) is (evet)
+
+  :Tedavi tipini ve açıklamasını girer\n(POST /api/doktor/randevu/{id}/tedavi)\n──────────────────────────────\nTedaviTipi: AMELİYAT | İLAÇ_TEDAVİSİ\n            FİZİK_TEDAVİ | SERVİS_YATIŞ\naciklama (isteğe bağlı);
+
+  |Sistem|
+  :Tedavi entity oluşturulur\nRandevu ile ilişkilendirilir\nKaydedilir;
+  :HastaTedaviDTO döner;
+  |Doktor|
+
+  while (Bu tedaviye reçete yazılacak?) is (evet)
+
+    :İlaç listesini girer\n(POST /randevu/{id}/tedavi/{tid}/recete)\n────────────────────────────\nilaclar: ["İlaç1", "İlaç2", ...];
+
+    |Sistem|
+    :Barkod UUID.randomUUID() ile üretilir\nRecete entity oluşturulur\nTedavi ile ilişkilendirilir\nKaydedilir;
+    :ReceteDTO döner\n(id, barkod, ilaclar);
+    |Doktor|
+
+  endwhile (hayır)
+
+endwhile (hayır)
+
+:Rapor yazmak istiyor mu?;
+
+if (Rapor eklenecek?) then (evet)
+
+  :Rapor içeriğini yazar\n(POST /api/doktor/randevu/{id}/rapor)\n────────────────────────────\nicerik: serbest metin;
+
+  |Sistem|
+  :Rapor entity oluşturulur\nRandevu ile ilişkilendirilir\nKaydedilir;
+  :RaporResponseDTO döner;
+  |Doktor|
+
+endif
+
+:Muayene süresini kaydeder\n(PUT /api/doktor/randevu/{id}/sure)\n────────────────────────────\nsureDakika: Integer;
+
+|Sistem|
+if (Randevu ödenmiş mi?) then (evet)
+  :400 IllegalArgumentException\n"Ödenmis randevu değiştirilemez";
+  |Doktor|
+  stop
+else (hayır)
+  :Randevu.sureDakika güncellenir;
+  :DoktorRandevuDTO döner;
+  |Doktor|
+endif
+
+:Muayene tamamlandı\nRandevu ödeme için hazır;
+
+stop
+
+note right
+  Doktor hatalı tedavi/reçete/rapor eklerse
+  DELETE endpoint'leri ile silebilir:
+  DELETE /randevu/{id}/tedavi/{tid}
+  DELETE /randevu/{id}/tedavi/{tid}/recete/{rid}
+  DELETE /randevu/{id}/rapor/{rid}
+  (sadece odendi=false iken)
+end note
+
+@enduml

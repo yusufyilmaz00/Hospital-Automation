@@ -1,0 +1,83 @@
+@startuml 02 - Randevu Olusturma Aktivite Diyagrami
+
+skinparam activityFontSize 13
+skinparam activityArrowFontSize 11
+skinparam activityBackgroundColor #FDFEFE
+skinparam activityBorderColor #555555
+skinparam partitionBackgroundColor #F4F6F7
+skinparam ArrowColor #333333
+skinparam noteBackgroundColor #FFFDE7
+
+title Randevu Oluşturma Aktivite Diyagramı
+
+|Randevu Görevlisi|
+start
+
+:Sisteme giriş yapar\n(POST /api/auth/login);
+
+:Doktor listesini görüntüler\n(GET /api/randevu-gorevlisi/doktorlar);
+
+|Sistem|
+:Tüm doktorları döner\n(isim, soyisim, bölüm, unvan);
+
+|Randevu Görevlisi|
+:Uygun doktoru seçer\n(doktorId);
+
+:Hasta ID ve\nrandevu tarihi/saatini girer\n(hastaId, randevuZamani\n[isteğe bağlı: sureDakika]);
+
+|Sistem|
+
+:Hasta varlığını kontrol eder\n(HastaService.findById);
+
+if (Hasta bulunamadı?) then (evet)
+  :404 EntityNotFoundException\n"Hasta bulunamadı";
+  |Randevu Görevlisi|
+  :Hasta ID düzeltir;
+  |Sistem|
+endif
+
+:Doktor varlığını kontrol eder\n(DoctorService.getDoctorById);
+
+if (Doktor bulunamadı?) then (evet)
+  :404 EntityNotFoundException\n"Doktor bulunamadı";
+  |Randevu Görevlisi|
+  :Doktor seçimini düzeltir;
+  |Sistem|
+endif
+
+:Doktor müsaitliğini kontrol eder\n(DoctorService.checkAvailability)\n────────────────────────────\nMevcut randevular ile çakışma var mı?;
+
+if (Doktor müsait mi?) then (hayır)
+
+  :Alternatif tarihleri hesaplar\n(GET /alternatif-tarih?haftaBaslangic=...)\n─────────────────────────\nBir haftalık süre içinde\n30 dakika aralıklarla\ntüm doktorların boş slotları;
+
+  |Randevu Görevlisi|
+  :Alternatif tarihleri görüntüler\n(AlternatifTarihDTO listesi\ndoktor + uygun tarih/saatler);
+
+  :Yeni tarih/saat seçer;
+  |Sistem|
+  :Müsaitlik tekrar kontrol edilir;
+
+else (evet)
+endif
+
+:Randevu nesnesi oluşturulur\n──────────────────────\nRandevu.builder()\n  .randevuZamani(...)\n  .hasta(hasta)\n  .doktor(doktor)\n  .sureDakika(sureDakika)\n  .odendi(false)\n  .build();
+
+:Randevu doktorun listesine eklenir\n(Doktor.activeReservations);
+
+:Veritabanına kaydedilir\n(RandevuRepository.save);
+
+:201 Created\nRandevuCreateResponseDTO döner\n(id, tarih, doktor, hasta);
+
+|Randevu Görevlisi|
+:Randevunun oluşturulduğunu görür;
+
+stop
+
+note right
+  Hasta, kendi randevusunu
+  GET /api/hasta/self ile
+  görüntüleyebilir.
+end note
+
+@enduml
