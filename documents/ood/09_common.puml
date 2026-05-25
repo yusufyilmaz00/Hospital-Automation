@@ -1,0 +1,63 @@
+@startuml 09 - Common Katmani (IletisimBilgisi)
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam packageStyle rectangle
+skinparam nodesep 60
+skinparam ranksep 70
+skinparam linetype ortho
+
+package "common" #F9F3E3 {
+
+  class IletisimBilgisi << @Entity\ntable: iletisim_bilgisi >> {
+    - id : Integer
+    - isim : String
+    - soyisim : String
+    - tckno : String  [length=11, @ValidTckn]
+    - telefon : String  [length=20]
+    - adres : String
+    - dogumTarihi : LocalDate
+  }
+
+  interface IletisimBilgisiRepository << JpaRepository<IletisimBilgisi, Integer> >> {
+  }
+
+  class IletisimBilgisiMapper << @Component >> {
+    + toEntity(dto : IletisimBilgisiDTO) : IletisimBilgisi
+    + toDTO(entity : IletisimBilgisi) : IletisimBilgisiDTO
+  }
+
+  class IletisimBilgisiDTO << DTO >> {
+    - isim : String
+    - soyisim : String
+    - tckno : String  [@ValidTckn]
+    - telefon : String
+    - adres : String
+    - dogumTarihi : LocalDate
+  }
+}
+
+package "dto.validator" #FAFAFA {
+  class TcknValidator << ConstraintValidator >> {
+    + isValid(tckn, context) : boolean
+  }
+
+  annotation ValidTckn << @Constraint >> {
+    Kural: 11 hane, rakam, 0 ile başlayamaz
+    Son hane = (ilk 10 hane toplamı) mod 10
+    Örnek: 10000000001, 20000000002
+  }
+}
+
+IletisimBilgisiMapper ..> IletisimBilgisi    : oluşturur / okur
+IletisimBilgisiMapper ..> IletisimBilgisiDTO : oluşturur / okur
+IletisimBilgisiDTO    ..> ValidTckn          : @ValidTckn (tckno alanı)
+ValidTckn             ..> TcknValidator      : validatedBy
+
+note bottom of IletisimBilgisi
+  Personel (tüm alt sınıflar) ve Hasta
+  birer IletisimBilgisi'ne sahiptir.
+  İlişki: OneToOne, CascadeType.ALL
+end note
+
+@enduml

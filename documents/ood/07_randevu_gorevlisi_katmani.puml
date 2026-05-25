@@ -1,0 +1,81 @@
+@startuml 07 - Randevu Gorevlisi Katmani
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam packageStyle rectangle
+skinparam nodesep 55
+skinparam ranksep 65
+skinparam linetype ortho
+
+package "personel.randevu_gorevlisi" #F9EBEA {
+
+  ' ── Service Interface ──────────────────────────────
+  interface RandevuGorevlisiService << interface >> {
+    + create(dto : RandevuGorevlisiCreateDTO) : RandevuGorevlisi
+    + getById(id : Long) : RandevuGorevlisi
+    + getAll() : List<RandevuGorevlisi>
+    + delete(id : Long) : void
+    + randevuIslemiYap(hastaId, doktorId, zaman) : Randevu
+    + randevuIslemiYap(hastaId, doktorId, zaman, sureDakika) : Randevu
+    + randevuIptalEt(doktorId, randevuId : Long) : void
+    + checkDoctorAvailability(doktorId, zaman) : boolean
+    + alternatifTarihleriListele(haftaBaslangic : LocalDate) : List<AlternatifTarihDTO>
+  }
+
+  ' ── Service Implementation ─────────────────────────
+  class RandevuGorevlisiServiceImpl << @Service >> {
+    - randevuGorevlisiRepository : RandevuGorevlisiRepository
+    - hastaService : HastaService
+    - doctorService : DoctorService
+    - iletisimMapper : IletisimBilgisiMapper
+    - passwordEncoder : PasswordEncoder
+  }
+
+  ' ── Repository ────────────────────────────────────
+  interface RandevuGorevlisiRepository << AuthUserRepository<RandevuGorevlisi> >> {
+    + findByEmail(email : String) : Optional<RandevuGorevlisi>
+  }
+
+  ' ── Mapper ────────────────────────────────────────
+  class AlternatifTarihMapper << @Component >> {
+    + toDTO(doktorId : Long, zamanlar : List<LocalDateTime>) : AlternatifTarihDTO
+  }
+
+  ' ── Controller ────────────────────────────────────
+  class RandevuGorevlisiController << @RestController\n/api/randevu-gorevlisi >> {
+    - randevuGorevlisiService : RandevuGorevlisiService
+    - doctorService : DoctorService
+    --
+    + register(dto) : ResponseEntity<?>
+    + doktorlariListele() : ResponseEntity<List<DoktorResponseDTO>>
+    + randevuOlustur(dto : RandevuCreateRequestDTO) : ResponseEntity<RandevuCreateResponseDTO>
+    + randevuIptalEt(randevuId : Long) : ResponseEntity<Void>
+    + alternatifTarihleriListele(dto) : ResponseEntity<List<AlternatifTarihDTO>>
+  }
+}
+
+' Dış bağımlılıklar (stub)
+class HastaService  << (I,#AAAAAA) dış interface >>
+class DoctorService << (I,#AAAAAA) dış interface >>
+
+' ======================== İLİŞKİLER ========================
+
+RandevuGorevlisiServiceImpl ..|> RandevuGorevlisiService
+
+RandevuGorevlisiController  ..> RandevuGorevlisiService  : kullanır
+RandevuGorevlisiController  ..> DoctorService            : doktor listesi
+
+RandevuGorevlisiServiceImpl ..> RandevuGorevlisiRepository : save / findById
+RandevuGorevlisiServiceImpl ..> HastaService              : hasta bulur
+RandevuGorevlisiServiceImpl ..> DoctorService             : müsaitlik / randevu ekle / sil
+RandevuGorevlisiServiceImpl ..> AlternatifTarihMapper     : kullanır
+
+note right of RandevuGorevlisiController
+  POST /register         → RG kaydı (admin endpoint)
+  GET  /doktorlar        → Doktor listesi (RG yetkili)
+  POST /randevu          → Randevu oluştur (RG yetkili)
+  DELETE /randevu/{id}   → Randevu iptal (RG yetkili)
+  GET  /alternatif-tarih → Uygun tarih listesi (extend UC)
+end note
+
+@enduml

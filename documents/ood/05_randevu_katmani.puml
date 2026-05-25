@@ -1,0 +1,122 @@
+@startuml 05 - Randevu Katmani (Entity'ler / Service / Repository'ler)
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam packageStyle rectangle
+skinparam nodesep 60
+skinparam ranksep 70
+skinparam linetype ortho
+
+package "randevu" #FDEBD0 {
+
+  ' ── Entities ──────────────────────────────────────
+
+  class Randevu << @Entity\ntable: randevu >> {
+    - id : Long
+    - randevuZamani : LocalDateTime
+    - ucret : Double
+    - sureDakika : Integer  [default: 30]
+    - sigortaIndirimOrani : Double  [default: 0.0]
+    - odendi : Boolean  [default: false]
+    - hasta : Hasta
+    - doktor : Doktor
+    - tedaviler : List<Tedavi>
+  }
+
+  class Tedavi << @Entity\ntable: tedavi >> {
+    - id : Long
+    - tedaviTipi : TedaviTipi
+    - aciklama : String
+    - randevu : Randevu
+    - receteler : List<Recete>
+  }
+
+  class Rapor << @Entity\ntable: rapor >> {
+    - id : Long
+    - icerik : String
+    - randevu : Randevu
+    --
+    + getId() : Long
+    + getIcerik() : String
+    + getRandevu() : Randevu
+  }
+
+  class Recete << @Entity\ntable: recete >> {
+    - id : Long
+    - barkod : String  [unique]
+    - ilaclar : List<String>
+    - tedavi : Tedavi
+    --
+    + ilacEkle(ilac : String) : void
+    + ilacSil(ilac : String) : void
+    + getId() : Long
+    + getBarkod() : String
+    + getIlaclar() : List<String>
+  }
+
+  enum TedaviTipi {
+    AMELIYAT
+    ILAC_TEDAVISI
+    FIZIK_TEDAVI
+    SERVIS_YATIS
+  }
+
+  ' ── Service Interface ──────────────────────────────
+  interface RandevuService << interface >> {
+    + ucretHesaplaVeOdemeAl(randevuId : Long) : RandevuOdemeDTO
+  }
+
+  ' ── Service Implementation ─────────────────────────
+  class RandevuServiceImpl << @Service >> {
+    - randevuRepository : RandevuRepository
+    - hastaService : HastaService
+    - doctorService : DoctorService
+  }
+
+  ' ── Repositories ──────────────────────────────────
+  interface RandevuRepository << JpaRepository<Randevu, Long> >> {
+    + findByDoktorId(doktorId : Long) : List<Randevu>
+    + findByHastaId(hastaId : Long) : List<Randevu>
+  }
+
+  interface RaporRepository << JpaRepository<Rapor, Long> >> {
+  }
+
+  interface ReceteRepository << JpaRepository<Recete, Long> >> {
+  }
+
+  ' ── Mapper ────────────────────────────────────────
+  class RaporMapper << @Component >> {
+    + toDTO(rapor : Rapor) : RaporResponseDTO
+  }
+
+  class ReceteMapper << @Component >> {
+    + toDTO(recete : Recete) : ReceteDTO
+  }
+}
+
+' ======================== İLİŞKİLER ========================
+
+RandevuServiceImpl ..|> RandevuService
+
+RandevuServiceImpl ..> RandevuRepository : kullanır
+
+' Entity ilişkileri (composition)
+Randevu "1" *-right- "0..*" Tedavi   : tedaviler\n(OneToMany, cascade ALL)
+Tedavi  "1" *-right- "0..*" Recete   : receteler\n(OneToMany, cascade ALL)
+Rapor   "0..*" -up-> "1" Randevu     : randevu (ManyToOne)
+Tedavi  "0..*" -up-> "1" Randevu     : randevu (ManyToOne)
+Recete  "0..*" -up-> "1" Tedavi      : tedavi (ManyToOne)
+
+Tedavi --> TedaviTipi
+
+RaporMapper  ..> Rapor   : maps
+ReceteMapper ..> Recete  : maps
+
+note bottom of Recete
+  barkod = UUID.randomUUID()
+  ilaclar @ElementCollection →
+  tablo: recete_ilac
+end note
+
+@enduml

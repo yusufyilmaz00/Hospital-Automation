@@ -1,0 +1,113 @@
+@startuml 02 - Personel Entity Hiyerarsisi
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam packageStyle rectangle
+skinparam nodesep 60
+skinparam ranksep 70
+skinparam linetype ortho
+
+interface AuthUser << interface >> {
+  + getId() : Long
+  + getEmail() : String
+  + getPassword() : String
+  + getUserType() : UserType
+}
+
+package "personel" #E8DAEF {
+
+  abstract class Personel << @MappedSuperclass >> {
+    - id : Long
+    - email : String
+    - password : String
+    - contactInformation : IletisimBilgisi
+    --
+    + getId() : Long
+    + getEmail() : String
+    + getPassword() : String
+  }
+
+  class KayitGorevlisi << @Entity\ntable: kayit_gorevlisi >> {
+    --
+    + getUserType() : UserType
+  }
+
+  class RandevuGorevlisi << @Entity\ntable: randevu_gorevlisi >> {
+    --
+    + getUserType() : UserType
+  }
+
+  class Veznedar << @Entity\ntable: veznedar >> {
+    --
+    + getUserType() : UserType
+  }
+
+  class Doktor << @Entity\ntable: doktor >> {
+    - department : Bolum
+    - unvan : Unvan
+    - activeReservations : List<Randevu>
+    --
+    + getUserType() : UserType
+  }
+
+  enum Bolum {
+    CARDIOLOGY
+    NEUROLOGY
+    ORTHOPEDICS
+    PEDIATRICS
+    DERMATOLOGY
+  }
+
+  enum Unvan {
+    INTERN      ("Stajyer",    50.0  /saat)
+    RESIDENT    ("Pratisyen",  75.0  /saat)
+    SPECIALIST  ("Uzman",      100.0 /saat)
+    ASSOCIATE_PROFESSOR ("Docent",   150.0 /saat)
+    PROFESSOR   ("Profesor",   200.0 /saat)
+    --
+    - displayName : String
+    - hourlyRate  : double
+    + getDisplayName() : String
+    + getHourlyRate() : double
+  }
+}
+
+class Hasta << @Entity\ntable: hasta >> {
+  - id : Long
+  - email : String
+  - password : String
+  - boy : Double
+  - kilo : Double
+  --
+  + getUserType() : UserType
+}
+
+class IletisimBilgisi << @Entity\ntable: iletisim_bilgisi >> {
+  - id : Integer
+  - isim : String
+  - soyisim : String
+  - tckno : String
+  - telefon : String
+  - adres : String
+  - dogumTarihi : LocalDate
+}
+
+' ======================== KALITIM ========================
+
+Personel  ..|> AuthUser
+Hasta     ..|> AuthUser
+
+KayitGorevlisi   --|> Personel
+RandevuGorevlisi --|> Personel
+Veznedar         --|> Personel
+Doktor           --|> Personel
+
+' ======================== ASOCIASYONLAR ========================
+
+Personel "1" *-right- "1" IletisimBilgisi : contactInformation\n(OneToOne, cascade ALL)
+Hasta    "1" *-right- "1" IletisimBilgisi : iletisimBilgisi\n(OneToOne, cascade ALL)
+
+Doktor --> Bolum : department
+Doktor --> Unvan : unvan
+
+@enduml

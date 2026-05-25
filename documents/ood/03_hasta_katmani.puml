@@ -1,0 +1,108 @@
+@startuml 03 - Hasta Katmani (Controller / Service / Repository / Mapper)
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam packageStyle rectangle
+skinparam nodesep 55
+skinparam ranksep 65
+skinparam linetype ortho
+
+package "hasta" #D5F5E3 {
+
+  ' ── Entities ──────────────────────────────────────
+  class Hasta << @Entity\ntable: hasta >> {
+    - id : Long
+    - email : String
+    - password : String
+    - boy : Double
+    - kilo : Double
+    - iletisimBilgisi : IletisimBilgisi
+    - randevular : List<Randevu>
+    - hastaliklar : List<Hastalik>
+    --
+    + getUserType() : UserType
+  }
+
+  class Hastalik << @Entity\ntable: hastalik >> {
+    - id : Long
+    - detay : String
+    - hasta : Hasta
+  }
+
+  ' ── Service Interface ──────────────────────────────
+  interface HastaService << interface >> {
+    + create(dto : HastaRequestDTO) : HastaResponseDTO
+    + getById(hastaId : Long) : HastaResponseDTO
+    + getAll() : List<HastaResponseDTO>
+    + findById(hastaId : Long) : Optional<Hasta>
+    + updateBoy(hastaId : Long, boy : Double) : void
+    + updateKilo(hastaId : Long, kilo : Double) : void
+    + updateIletisim(hastaId : Long, iletisim : IletisimBilgisi) : void
+    + updatePassword(hastaId : Long, password : String) : void
+    + updateEmail(hastaId : Long, email : String) : void
+    + getHastaliklar(hastaId : Long) : List<HastalikDTO>
+    + createHastalik(hastaId : Long, detay : String) : void
+    + updateHastalik(hastaId : Long, id : Long, detay : String) : void
+    + deleteHastalik(hastaId : Long, id : Long) : void
+  }
+
+  ' ── Service Implementation ─────────────────────────
+  class HastaServiceImpl << @Service >> {
+    - hastaRepository : HastaRepository
+    - hastalikRepository : HastalikRepository
+    - iletisimRepository : IletisimBilgisiRepository
+    - iletisimMapper : IletisimBilgisiMapper
+    - hastaMapper : HastaMapper
+    - hastalikMapper : HastalikMapper
+    - passwordEncoder : PasswordEncoder
+    --
+    - getHasta(hastaId : Long) : Hasta
+  }
+
+  ' ── Repositories ──────────────────────────────────
+  interface HastaRepository << AuthUserRepository<Hasta> >> {
+    + findByEmail(email : String) : Optional<Hasta>
+  }
+
+  interface HastalikRepository << JpaRepository<Hastalik, Long> >> {
+  }
+
+  ' ── Mappers ───────────────────────────────────────
+  class HastaMapper << @Component >> {
+    + toDTO(hasta : Hasta) : HastaResponseDTO
+  }
+
+  class HastalikMapper << @Component >> {
+    + toDTO(hastalik : Hastalik) : HastalikDTO
+  }
+
+  ' ── Controller ────────────────────────────────────
+  class HastaController << @RestController\n/api/hasta >> {
+    - hastaService : HastaService
+    - iletisimMapper : IletisimBilgisiMapper
+    --
+    + getSelf() : ResponseEntity<HastaResponseDTO>
+    + updateBoy(boy : Double) : ResponseEntity<Void>
+    + updateKilo(kilo : Double) : ResponseEntity<Void>
+    + updateIletisim(dto : IletisimBilgisiDTO) : ResponseEntity<Void>
+  }
+}
+
+' ======================== İLİŞKİLER ========================
+
+HastaServiceImpl  ..|> HastaService
+
+' Controller → Service
+HastaController ..> HastaService : kullanır
+
+' Service → Repository
+HastaServiceImpl ..> HastaRepository     : findById / save
+HastaServiceImpl ..> HastalikRepository  : save / delete
+HastaServiceImpl ..> HastaMapper         : kullanır
+HastaServiceImpl ..> HastalikMapper      : kullanır
+
+' Entity ilişkileri
+Hasta     "1" *-- "0..*" Hastalik : hastaliklar\n(OneToMany, cascade ALL)
+Hastalik  "0..*" --> "1" Hasta    : hasta (ManyToOne)
+
+@enduml

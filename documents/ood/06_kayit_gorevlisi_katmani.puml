@@ -1,0 +1,63 @@
+@startuml 06 - Kayit Gorevlisi Katmani
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam packageStyle rectangle
+skinparam nodesep 55
+skinparam ranksep 65
+skinparam linetype ortho
+
+package "personel.kayit" #F2F3F4 {
+
+  ' ── Service Interface ──────────────────────────────
+  interface KayitGorevlisiService << interface >> {
+    + create(dto : KayitGorevlisiRequestDTO) : KayitGorevlisiResponseDTO
+    + getAll() : List<KayitGorevlisiResponseDTO>
+  }
+
+  ' ── Service Implementation ─────────────────────────
+  class KayitGorevlisiServiceImpl << @Service >> {
+    - kayitGorevlisiRepository : KayitGorevlisiRepository
+    - hastaService : HastaService
+    - iletisimMapper : IletisimBilgisiMapper
+    - passwordEncoder : PasswordEncoder
+  }
+
+  ' ── Repository ────────────────────────────────────
+  interface KayitGorevlisiRepository << AuthUserRepository<KayitGorevlisi> >> {
+    + findByEmail(email : String) : Optional<KayitGorevlisi>
+  }
+
+  ' ── Controller ────────────────────────────────────
+  class KayitGorevlisiController << @RestController\n/api/kayit >> {
+    - kayitGorevlisiService : KayitGorevlisiService
+    - hastaService : HastaService
+    --
+    + register(dto : KayitGorevlisiRequestDTO) : ResponseEntity<KayitGorevlisiResponseDTO>
+    + hastaKaydet(dto : HastaRequestDTO) : ResponseEntity<HastaResponseDTO>
+    + hastalariListele() : ResponseEntity<List<HastaResponseDTO>>
+  }
+}
+
+' Dış bağımlılıklar (stub)
+class HastaService << (I,#AAAAAA) dış interface >>
+class IletisimBilgisiMapper << (C,#AAAAAA) dış sınıf >>
+
+' ======================== İLİŞKİLER ========================
+
+KayitGorevlisiServiceImpl ..|> KayitGorevlisiService
+
+KayitGorevlisiController  ..> KayitGorevlisiService  : kullanır
+KayitGorevlisiController  ..> HastaService           : hasta kaydet / listele
+
+KayitGorevlisiServiceImpl ..> KayitGorevlisiRepository : save / findAll
+KayitGorevlisiServiceImpl ..> HastaService             : hasta oluşturur
+KayitGorevlisiServiceImpl ..> IletisimBilgisiMapper     : DTO → Entity
+
+note right of KayitGorevlisiController
+  POST /register   → KG kaydı (admin endpoint)
+  POST /hasta      → Hasta kayıt (KG yetkili)
+  GET  /hastalar   → Tüm hastalar (KG yetkili)
+end note
+
+@enduml

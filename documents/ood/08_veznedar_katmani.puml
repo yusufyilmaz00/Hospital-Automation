@@ -1,0 +1,64 @@
+@startuml 08 - Veznedar Katmani
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam packageStyle rectangle
+skinparam nodesep 55
+skinparam ranksep 65
+skinparam linetype ortho
+
+package "personel.vezne" #F0FFF0 {
+
+  ' ── Service Interface ──────────────────────────────
+  interface VeznedarService << interface >> {
+    + create(dto : VeznedarCreateDTO) : VeznedarResponseDTO
+  }
+
+  ' ── Service Implementation ─────────────────────────
+  class VeznedarServiceImpl << @Service >> {
+    - veznedarRepository : VeznedarRepository
+    - iletisimMapper : IletisimBilgisiMapper
+    - passwordEncoder : PasswordEncoder
+  }
+
+  ' ── Repository ────────────────────────────────────
+  interface VeznedarRepository << AuthUserRepository<Veznedar> >> {
+    + findByEmail(email : String) : Optional<Veznedar>
+  }
+
+  ' ── Controller ────────────────────────────────────
+  class VeznedarController << @RestController\n/api/veznedar >> {
+    - randevuService : RandevuService
+    - veznedarService : VeznedarService
+    --
+    + veznedarOlustur(dto : VeznedarCreateDTO) : ResponseEntity<VeznedarResponseDTO>
+    + randevuOdemesiAl(randevuId : Long) : ResponseEntity<RandevuOdemeDTO>
+  }
+}
+
+' Dış bağımlılıklar (stub)
+interface RandevuService << (I,#AAAAAA) dış interface >> {
+  + ucretHesaplaVeOdemeAl(randevuId : Long) : RandevuOdemeDTO
+}
+
+' ======================== İLİŞKİLER ========================
+
+VeznedarServiceImpl ..|> VeznedarService
+
+VeznedarController  ..> VeznedarService : kayıt işlemi
+VeznedarController  ..> RandevuService  : ödeme al
+
+VeznedarServiceImpl ..> VeznedarRepository : save / findById
+
+note right of VeznedarController
+  POST /register               → Veznedar kaydı (admin endpoint)
+  POST /randevu/{id}/odeme     → Ücret hesapla + ödeme al (Veznedar yetkili)
+
+  Ödeme hesaplaması:
+    ucret = sureDakika/60 * doktor.hourlyRate
+            + tedavi katsayıları
+    indirim = sigortaIndirimOrani ile çarpılır
+    Randevu.odendi = true olarak işaretlenir
+end note
+
+@enduml

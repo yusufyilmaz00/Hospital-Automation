@@ -1,0 +1,111 @@
+@startuml 04 - Doktor Katmani (Controller / Service / Repository / Mapper)
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam packageStyle rectangle
+skinparam nodesep 55
+skinparam ranksep 65
+skinparam linetype ortho
+
+package "personel.doktor" #EBF5FB {
+
+  ' ── Service Interface ──────────────────────────────
+  interface DoctorService << interface >> {
+    + createDoktor(dto : DoktorCreateDTO) : Doktor
+    + getAllDoctors() : List<Doktor>
+    + getDoctorById(id : Long) : Doktor
+    + saveDoctor(doktor : Doktor) : Doktor
+    + deleteDoctor(id : Long) : void
+    + getActiveReservations(doctorId : Long) : List<Randevu>
+    + addReservation(doctorId, zaman, hasta) : Randevu
+    + addReservation(doctorId, zaman, hasta, sure) : Randevu
+    + removeReservation(doctorId, randevuId : Long) : void
+    + checkAvailability(doctorId, zaman) : boolean
+    + isAvailable(doctorId, start, end, interval) : List<LocalDateTime>
+    + calculateSalary(doctorId : Long) : Double
+    + getMyRandevular(doktorId : Long) : List<DoktorRandevuDTO>
+    + getHastaByRandevuId(doktorId, randevuId : Long) : HastaResponseDTO
+    + updateRandevuSuresi(doktorId, randevuId, sure) : DoktorRandevuDTO
+    + addTedavi(doktorId, randevuId, dto) : HastaTedaviDTO
+    + removeTedavi(doktorId, randevuId, tedaviId : Long) : void
+    + addRecete(doktorId, randevuId, tedaviId, dto) : ReceteDTO
+    + removeRecete(doktorId, randevuId, tedaviId, receteId : Long) : void
+    + addRapor(doktorId, randevuId, dto) : RaporResponseDTO
+    + removeRapor(doktorId, randevuId, raporId : Long) : void
+    + updateHastaBoy(doktorId, hastaId, boy) : void
+    + updateHastaKilo(doktorId, hastaId, kilo) : void
+    + addHastalik(doktorId, hastaId, detay) : void
+    + updateHastalik(doktorId, hastaId, hastalikId, detay) : void
+    + deleteHastalik(doktorId, hastaId, hastalikId : Long) : void
+  }
+
+  ' ── Service Implementation ─────────────────────────
+  class DoctorServiceImpl << @Service >> {
+    - doctorRepository : DoctorRepository
+    - hastaService : HastaService
+    - randevuRepository : RandevuRepository
+    - raporRepository : RaporRepository
+    - receteRepository : ReceteRepository
+    - iletisimMapper : IletisimBilgisiMapper
+    - passwordEncoder : PasswordEncoder
+  }
+
+  ' ── Repository ────────────────────────────────────
+  interface DoctorRepository << AuthUserRepository<Doktor> >> {
+    + findByEmail(email : String) : Optional<Doktor>
+  }
+
+  ' ── Mapper ────────────────────────────────────────
+  class DoktorMapper << @Component >> {
+    + toDTO(doktor : Doktor) : DoktorResponseDTO
+  }
+
+  class DoktorRandevuMapper << @Component >> {
+    + toDTO(randevu : Randevu) : DoktorRandevuDTO
+  }
+
+  ' ── Controller ────────────────────────────────────
+  class DoktorController << @RestController\n/api/doktor >> {
+    - doctorService : DoctorService
+    - doktorMapper : DoktorMapper
+    --
+    + doktorKaydet(dto) : ResponseEntity<DoktorResponseDTO>
+    + doktorlariListele() : ResponseEntity<List<DoktorResponseDTO>>
+    + randevulariListele() : ResponseEntity<List<DoktorRandevuDTO>>
+    + hastayiGor(randevuId) : ResponseEntity<HastaResponseDTO>
+    + randevuSuresiGuncelle(randevuId, dto) : ResponseEntity<DoktorRandevuDTO>
+    + tedaviEkle(randevuId, dto) : ResponseEntity<HastaTedaviDTO>
+    + tedaviSil(randevuId, tedaviId) : ResponseEntity<Void>
+    + receteEkle(randevuId, tedaviId, dto) : ResponseEntity<ReceteDTO>
+    + receteSil(randevuId, tedaviId, receteId) : ResponseEntity<Void>
+    + raporEkle(randevuId, dto) : ResponseEntity<RaporResponseDTO>
+    + raporSil(randevuId, raporId) : ResponseEntity<Void>
+    + hastaninBoyunuGuncelle(hastaId, boy) : ResponseEntity<Void>
+    + hastaninKilosunuGuncelle(hastaId, kilo) : ResponseEntity<Void>
+    + hastalikEkle(hastaId, dto) : ResponseEntity<Void>
+    + hastalikGuncelle(hastaId, hastalikId, dto) : ResponseEntity<Void>
+    + hastalikSil(hastaId, hastalikId) : ResponseEntity<Void>
+  }
+}
+
+' Dış bağımlılıklar (stub)
+class HastaService << (I,#AAAAAA) dış interface >>
+class RandevuRepository << (I,#AAAAAA) dış interface >>
+class RaporRepository << (I,#AAAAAA) dış interface >>
+class ReceteRepository << (I,#AAAAAA) dış interface >>
+
+' ======================== İLİŞKİLER ========================
+
+DoctorServiceImpl ..|> DoctorService
+
+DoktorController  ..> DoctorService       : kullanır
+DoktorController  ..> DoktorMapper        : kullanır
+
+DoctorServiceImpl ..> DoctorRepository    : findById / save
+DoctorServiceImpl ..> HastaService        : hasta işlemleri
+DoctorServiceImpl ..> RandevuRepository   : randevu CRUD
+DoctorServiceImpl ..> RaporRepository     : rapor CRUD
+DoctorServiceImpl ..> ReceteRepository    : recete CRUD
+DoctorServiceImpl ..> DoktorRandevuMapper : kullanır
+
+@enduml

@@ -1,0 +1,136 @@
+@startuml 01 - Auth / Session / Security Katmani
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam packageStyle rectangle
+skinparam nodesep 55
+skinparam ranksep 65
+skinparam linetype ortho
+
+' ======================== AUTH ========================
+
+package "auth" #FDEBD0 {
+
+  interface AuthUser << interface >> {
+    + getId() : Long
+    + getEmail() : String
+    + getPassword() : String
+    + getUserType() : UserType
+  }
+
+  interface "AuthUserRepository<T extends AuthUser>" as AuthUserRepository << @NoRepositoryBean >> {
+    + findByEmail(email : String) : Optional<T>
+  }
+
+  enum UserType {
+    HASTA
+    DOKTOR
+    KAYIT_GOREVLISI
+    RANDEVU_GOREVLISI
+    VEZNEDAR
+    --
+    + getEntityClass() : Class<? extends AuthUser>
+  }
+
+  class AuthService << @Service >> {
+    - dummyHash : String
+    - passwordEncoder : PasswordEncoder
+    - sessionService : SessionService
+    - authUserService : AuthUserService
+    --
+    + login(request : AuthRequest) : Session
+    - findByEmail(email : String) : Optional<AuthUser>
+  }
+
+  class AuthUserService << @Service >> {
+    - hastaRepository : HastaRepository
+    - doctorRepository : DoctorRepository
+    - kayitGorevlisiRepository : KayitGorevlisiRepository
+    - randevuGorevlisiRepository : RandevuGorevlisiRepository
+    - veznedarRepository : VeznedarRepository
+    --
+    + getRepository(userType : UserType) : AuthUserRepository<?>
+    + getClass(userType : UserType) : Class<? extends AuthUser>
+  }
+
+  class AuthController << @RestController\n/api/auth >> {
+    - authService : AuthService
+    - sessionService : SessionService
+    --
+    + login(request : AuthRequest) : ResponseEntity<LoginResponseDTO>
+    + logout() : ResponseEntity<Void>
+  }
+}
+
+' ======================== SESSION ========================
+
+package "session" #D5F5E3 {
+
+  class Session << @Entity\ntable: sessions >> {
+    - id : UUID
+    - token : String
+    - userId : Long
+    - createdAt : LocalDateTime
+    - expiresAt : LocalDateTime
+    - active : Boolean
+    - userType : UserType
+  }
+
+  class SessionService << @Service >> {
+    - sessionRepository : SessionRepository
+    --
+    + createSession(user : AuthUser) : Session
+    + getByToken(token : String) : Optional<Session>
+    + isValid(session : Session) : Boolean
+    + invalidate(session : Session) : void
+    + invalidateAllUserSessions(userId : Integer) : void
+  }
+
+  interface SessionRepository << JpaRepository<Session, UUID> >> {
+    + findByToken(token : String) : Optional<Session>
+    + findAllByUserIdAndActiveTrue(userId : Integer) : List<Session>
+  }
+}
+
+' ======================== SECURITY ========================
+
+package "security" #D6EAF8 {
+
+  class SessionAuthFilter << @Component\nextends OncePerRequestFilter >> {
+    - sessionService : SessionService
+    - authUserService : AuthUserService
+    --
+    # doFilterInternal(req, res, chain) : void
+    - getSession(token : String) : Optional<Session>
+    - setAuth(session : Session) : void
+  }
+
+  class SecurityContextUtil << utility >> {
+    + {static} set(userId : Long, userType : UserType) : void
+    + {static} currentUser(clazz : Class<T>) : Optional<Long>
+  }
+
+  class CookieUtil << utility >> {
+    + {static} getCookie(request, name : String) : Optional<String>
+    + {static} addCookie(response, name, value, maxAge) : void
+    + {static} deleteCookie(response, name) : void
+  }
+}
+
+' ======================== İLİŞKİLER ========================
+
+AuthService       ..> SessionService     : kullanır
+AuthService       ..> AuthUserService    : kullanır
+AuthController    ..> AuthService        : kullanır
+AuthController    ..> SessionService     : kullanır
+
+AuthUserService   ..> AuthUserRepository : döndürür
+
+SessionService    *-- SessionRepository  : kullanır
+Session           --> UserType
+
+SessionAuthFilter ..> SessionService     : token doğrular
+SessionAuthFilter ..> SecurityContextUtil : auth set eder
+SessionAuthFilter ..> CookieUtil         : cookie okur
+
+@enduml
